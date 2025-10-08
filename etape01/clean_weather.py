@@ -91,15 +91,21 @@ if __name__ == "__main__":
         .option("mode", "DROPMALFORMED") \
         .csv("../data_raw/weather_raw.csv")
     
-    df_clean = df.withColumn("timestamp", clean_date("timestamp")) \
-        .withColumn("temperature_c", clean_temperature("temperature_c")) \
-        .withColumn("rain_mm", clean_rain_mm("rain_mm")) \
-        .withColumn("weather_condition", clean_weather("weather_condition")) \
+    df_clean = (
+    df.withColumn("timestamp", clean_date(F.col("timestamp")))
+      .withColumn("temperature_c", clean_temperature(F.col("temperature_c")))
+      .withColumn("rain_mm", clean_rain_mm(F.col("rain_mm")))
+      .withColumn("weather_condition", clean_weather(F.col("weather_condition")))
+      .withColumn("date_partition", F.to_date(F.col("timestamp")))
+)
 
-    pandas_df = df_clean.toPandas()
+    # pandas_df = df_clean.toPandas()
     os.makedirs("../data_clean/", exist_ok=True)
 
-    pandas_df.to_csv("../data_clean/clean_weather.csv", index=False)
+    # pandas_df.to_csv("../data_clean/clean_weather.csv", index=False)
+    df_clean.write.mode("overwrite") \
+    .partitionBy("date_partition") \
+    .parquet("./data_clean/")
 
     spark.stop()
 
