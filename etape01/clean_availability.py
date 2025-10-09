@@ -122,6 +122,9 @@ if __name__ == "__main__":
                        .filter(F.col("rn") == 1) \
                        .drop("score", "rn")
 
+    # creation du répertoire data_clean s'il n'existe pas
+    os.makedirs("../data_clean/", exist_ok=True)
+
     # conversion en pandas pour sauvegarde en CSV
     pandas_df = df_dedup.toPandas()
 
@@ -130,9 +133,6 @@ if __name__ == "__main__":
         if c in pandas_df.columns:
             pandas_df[c] = pandas_df[c].astype("Int64")
 
-    # creation du répertoire data_clean s'il n'existe pas
-    os.makedirs("../data_clean/", exist_ok=True)
-
     # sauvegarde en CSV
     pandas_df.to_csv("../data_clean/clean_availability.csv", index=False)
 
@@ -140,4 +140,3 @@ if __name__ == "__main__":
     spark.stop()
 
     # spark-submit clean_availability.py
-    # pour exécuter en ligne de commande

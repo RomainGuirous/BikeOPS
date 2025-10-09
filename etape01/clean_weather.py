@@ -84,29 +84,37 @@ def clean_weather(s: str) -> str | None:
 
 if __name__ == "__main__":
 
+    # creation Spark session
     spark = SparkSession.builder.master("local[*]").getOrCreate()
 
+    # lecture du fichier CSV
     df = spark.read.option("header", True) \
         .option("sep", ";") \
         .option("mode", "DROPMALFORMED") \
         .csv("../data_raw/weather_raw.csv")
     
+    # nettoyage des données
     df_clean = (
     df.withColumn("timestamp", clean_date(F.col("timestamp")))
       .withColumn("temperature_c", clean_temperature(F.col("temperature_c")))
       .withColumn("rain_mm", clean_rain_mm(F.col("rain_mm")))
       .withColumn("weather_condition", clean_weather(F.col("weather_condition")))
       .withColumn("date_partition", F.to_date(F.col("timestamp")))
-)
+    )
 
-    # pandas_df = df_clean.toPandas()
+    # creation du répertoire data_clean s'il n'existe pas
     os.makedirs("../data_clean/", exist_ok=True)
 
-    # pandas_df.to_csv("../data_clean/clean_weather.csv", index=False)
-    df_clean.write.mode("overwrite") \
-    .partitionBy("date_partition") \
-    .parquet("./data_clean/")
+    # utiliser pandas pour créer csv
+    pandas_df = df_clean.toPandas()
+    pandas_df.to_csv("../data_clean/clean_weather.csv", index=False)
 
+    # # utiliser spark pour créer fichier parquet (nécessite environnement et paramètres spécifiques)
+    # df_clean.write.mode("overwrite") \
+    # .partitionBy("date_partition") \
+    # .parquet("./data_clean/")
+
+    # arrêt de la session Spark
     spark.stop()
 
-    #spark-submit clean_weather.py
+    # spark-submit clean_weather.py
