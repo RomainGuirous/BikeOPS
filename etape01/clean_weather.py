@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     # utiliser pandas pour créer csv
     pandas_df = df_clean.toPandas()
-    pandas_df.to_csv("../data_clean/clean_weather.csv", index=False)
+    pandas_df.to_csv("../data_clean/weather_silver.csv", index=False)
 
     # # utiliser spark pour créer fichier parquet (nécessite environnement et paramètres spécifiques)
     # df_clean.write.mode("overwrite") \

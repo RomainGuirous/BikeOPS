@@ -134,7 +134,7 @@ if __name__ == "__main__":
             pandas_df[c] = pandas_df[c].astype("Int64")
 
     # sauvegarde en CSV
-    pandas_df.to_csv("../data_clean/clean_availability.csv", index=False)
+    pandas_df.to_csv("../data_clean/availability_silver.csv", index=False)
 
     # arrêt de la session Spark
     spark.stop()
