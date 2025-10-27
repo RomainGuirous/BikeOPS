@@ -243,4 +243,3 @@ Les données sont volontairement bruitées (formats incohérents, valeurs manqua
 * **Étapes 4–5 (ML)** : baseline, modèle TensorFlow, scoring batch et restitution.
 * **Étapes 6–7 (DevOps)** : conteneurisation, CI/CD, streaming Spark.
 * **Étapes 8–9 (Cloud)** : migration GCP, orchestration et observabilité.
-

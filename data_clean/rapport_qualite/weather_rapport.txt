@@ -1,0 +1,6 @@
+Rapport qualité - weather_silver
+-------------------------------------
+- Lignes brutes : 65
+- Lignes corrigées : 264
+- Lignes invalidées (remplacées par None) : 15
+- Lignes supprimées : 0

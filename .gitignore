@@ -208,3 +208,25 @@ __marimo__/
 
 # Data
 *.csv
+
+# Ignorer tout le contenu de data_clean
+data_clean/*
+
+# Ne pas ignorer les dossiers dans data_clean
+!data_clean/
+!data_clean/**/
+
+# Optionnel : garder les fichiers spécifiques comme des fichiers README ou .gitkeep
+!data_clean/**/.gitkeep
+
+# Ignorer tous les fichiers .parquet dans data_clean
+data_clean/**/*.parquet
+
+# Ignorer les fichiers .snappy.parquet.crc dans data_clean
+data_clean/**/*.snappy.parquet.crc
+
+# Ignorer les fichiers _SUCCESS dans data_clean
+data_clean/**/_SUCCESS
+
+# Ignorer les fichiers ._SUCCESS.crc dans data_clean
+data_clean/**/._SUCCESS.crc
