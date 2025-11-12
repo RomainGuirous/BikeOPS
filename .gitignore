@@ -222,6 +222,9 @@ data_clean/*
 # Ignorer tous les fichiers .parquet dans data_clean
 data_clean/**/*.parquet
 
+# # Ignorer tous les fichiers .txt dans data_clean
+# data_clean/**/*.txt
+
 # Ignorer les fichiers .snappy.parquet.crc dans data_clean
 data_clean/**/*.snappy.parquet.crc
 
