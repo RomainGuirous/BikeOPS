@@ -1,103 +1,11 @@
 from pyspark.sql import SparkSession, functions as F, types as T
 from pyspark.sql.window import Window
-import pandas as pd
+from etl.udf import(
+    clean_positive_int,
+    clean_date,
+    clean_nb_bikes,
+)
 import os
-
-# le décorateur permet à Spark d'utiliser cette fonction
-@F.udf(T.IntegerType())
-def clean_positive_int(s: str) -> int | None:
-    """
-    Nettoie une chaîne de caractères pour obtenir un entier positif.
-    
-    Args:
-        s (str): La chaîne de caractères à nettoyer.
-        
-    Returns:
-        int or None: L'entier positif si la conversion est réussie et que l'entier est positif, sinon None.
-    """
-    global lignes_corrigees, valeurs_invalides
-    if not s:
-        valeurs_invalides +=1
-        return None
-    try:
-        val = int(s)
-        if val > 0:
-            if val != s:
-                lignes_corrigees +=1
-            return val
-        else:
-            valeurs_invalides +=1
-            return None
-    # on attend ValueError ou TypeError, on attrape les deux pour éviter de masquer d'autres erreurs
-    except (ValueError, TypeError):
-        valeurs_invalides +=1
-        return None
-
-@F.udf(T.StringType())
-def clean_date(s: str) -> str | None:
-    """
-    Nettoie une chaîne de caractères pour obtenir une date au format YYYY-MM-DD HH:MM:SS.
-
-    Args:
-        s (str): La chaîne de caractères à nettoyer.
-        
-    Returns:
-        str or None: La date formatée si la conversion est réussie, sinon None.
-    """
-    global lignes_corrigees, valeurs_invalides
-    if not s:
-        valeurs_invalides +=1
-        return None
-    try:
-        d = pd.to_datetime(s, errors="coerce")
-        if pd.isnull(d):
-            valeurs_invalides +=1
-            return None
-        formated_date = d.strftime("%Y-%m-%d %H:%M:%S")
-        if formated_date != s:
-                lignes_corrigees +=1
-        return formated_date
-    except (ValueError, TypeError):
-        valeurs_invalides +=1
-        return None
-    
-@F.udf(T.IntegerType())
-def clean_nb_bikes(a: str, b: str, capacity: str) -> int | None:
-    """
-    Nettoie le nombre de vélos disponibles ou de places libres en fonction de la capacité de la station.
-    
-    Args:
-        a (str): Le nombre de vélos disponibles ou de places libres à nettoyer.
-        b (str): Le nombre complémentaire (places libres si a est vélos disponibles, et vice versa).
-        capacity (str): La capacité totale de la station.
-        
-    Returns:
-        int or None: Le nombre nettoyé si la conversion est réussie et que les contraintes sont respectées, sinon None.
-    """
-    global lignes_corrigees, valeurs_invalides
-    if not a or not a.isnumeric():
-        if b and capacity:
-            try:
-                diff = int(capacity) - int(b)
-                if diff >= 0:
-                    return diff
-                else:
-                    return 0
-            except (ValueError, TypeError):
-                valeurs_invalides +=1
-                return None
-    try:
-        val = int(a)
-        if val < 0:
-            valeurs_invalides +=1
-            return 0
-        elif val > int(capacity):
-            return int(capacity)
-        else:
-            return val
-    except (ValueError, TypeError):
-        valeurs_invalides +=1
-        return None
     
 
 if __name__ == "__main__":
@@ -190,4 +98,4 @@ if __name__ == "__main__":
     # arrêt de la session Spark
     spark.stop()
 
-    # spark-submit etape01/clean_availability.py
+    # spark-submit etl/silver/availability_silver.py
