@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession, DataFrame, functions as F
 
-def read_csv_spark(spark: SparkSession, path: str, col: list= None) -> DataFrame:
+def read_csv_spark(spark: SparkSession, path: str, col: list= None, *, delimiter: str = ";") -> DataFrame:
     """
     Lit un fichier avec Spark et retourne un DataFrame.
 
@@ -15,7 +15,7 @@ def read_csv_spark(spark: SparkSession, path: str, col: list= None) -> DataFrame
     if col is not None:
         df = (
             spark.read.option("header", True)
-            .option("sep", ";")
+            .option("sep", delimiter)
             .option("mode", "DROPMALFORMED")
             .csv(path)
             .select(*col)
@@ -23,7 +23,7 @@ def read_csv_spark(spark: SparkSession, path: str, col: list= None) -> DataFrame
         return df
     df = (
         spark.read.option("header", True)
-        .option("sep", ";")
+        .option("sep", delimiter)
         .option("mode", "DROPMALFORMED")
         .csv(path)
     )

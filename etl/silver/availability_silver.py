@@ -1,15 +1,19 @@
+import os
+# import sys
+# # Ajouter le chemin racine du projet au PYTHONPATH
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
 from pyspark.sql import SparkSession, functions as F
 from pyspark.sql.window import Window
 from etl.utils.udf import (
-    clean_positive_int,
-    clean_date,
-    clean_nb_bikes,
+    clean_positive_int_udf,
+    clean_date_udf,
+    clean_nb_bikes_udf,
 )
 from etl.utils.spark_functions import (
     read_csv_spark,
     apply_transformations,
 )
-import os
 
 if __name__ == "__main__":
     # creation Spark session
@@ -21,13 +25,18 @@ if __name__ == "__main__":
     valeurs_invalides = spark.sparkContext.accumulator(0)
 
     # lecture du fichier CSV
-    df = read_csv_spark(spark,"./data/data_raw/availability_raw.csv")
+    df = read_csv_spark(spark, "/app/data/data_raw/availability_raw.csv")
 
     # nombre de lignes brutes => pour rapport qualité
     lignes_brutes = df.count()
 
     # extraction colonnes station_id et capacity depuis stations.csv
-    capacity = read_csv_spark(spark, "./data/data_raw/stations.csv", ["station_id", "capacity"])
+    capacity = read_csv_spark(
+        spark,
+        "/app/data/data_raw/stations.csv",
+        ["station_id", "capacity"],
+        delimiter=",",
+    )
 
     # jointure pour ajouter la capacité
     df = df.join(capacity, on="station_id", how="left")
@@ -65,28 +74,33 @@ if __name__ == "__main__":
     transformations = [
         {
             "col": "station_id",
-            "func": clean_positive_int,
-            "args": [lignes_corrigees, valeurs_invalides]
+            "func": clean_positive_int_udf(lignes_corrigees, valeurs_invalides),
+            "args": [],
         },
         {
             "col": "timestamp",
-            "func": clean_date,
-            "args": [lignes_corrigees, valeurs_invalides]
+            "func": clean_date_udf(lignes_corrigees, valeurs_invalides),
+            "args": [],
         },
         {
             "col": "bikes_available",
-            "func": clean_nb_bikes,
-            "args": ["slots_free", "capacity", lignes_corrigees, valeurs_invalides],
+            "func": clean_nb_bikes_udf(
+                lignes_corrigees, valeurs_invalides
+            ),
+            "args": ["slots_free", "capacity"],
         },
         {
             "col": "slots_free",
-            "func": clean_nb_bikes,
-            "args": ["bikes_available", "capacity", lignes_corrigees, valeurs_invalides],
-        }
+            "func": clean_nb_bikes_udf(
+                lignes_corrigees, valeurs_invalides
+            ),
+            "args": [],
+        },
     ]
 
-    df_clean = apply_transformations(df, transformations, score=True, drop=["capacity"]) \
-        .withColumn("date_partition", F.to_date(F.col("timestamp")))
+    df_clean = apply_transformations(
+        df, transformations, score=True, drop=["capacity"]
+    ).withColumn("date_partition", F.to_date(F.col("timestamp")))
 
     # group by station_id et timestamp, order by score
     dup_wind = Window.partitionBy("station_id", "timestamp").orderBy("score")
@@ -99,7 +113,7 @@ if __name__ == "__main__":
     )
 
     # creation du répertoire data_clean s'il n'existe pas
-    os.makedirs("../data_clean/", exist_ok=True)
+    os.makedirs("/app/data/data_clean/", exist_ok=True)
 
     # ======PANDAS======
     # # conversion en pandas pour sauvegarde en CSV
@@ -115,7 +129,7 @@ if __name__ == "__main__":
 
     # ======SPARK======
     df_clean.write.mode("overwrite").partitionBy("date_partition").parquet(
-        "./data_clean/availability_silver"
+        "/app/data/data_clean/availability_silver"
     )
 
     # =====RAPPORT QUALITE=====
@@ -129,10 +143,10 @@ if __name__ == "__main__":
     ]
 
     # Création du répertoire rapport_qualite s'il n'existe pas
-    os.makedirs("./data_clean/rapport_qualite", exist_ok=True)
+    os.makedirs("/app/data/data_clean/rapport_qualite", exist_ok=True)
 
     # Écriture du rapport qualité dans un fichier texte
-    with open("./data_clean/rapport_qualite/weather_rapport.txt", "w") as f:
+    with open("/app/data/data_clean/rapport_qualite/weather_rapport.txt", "w") as f:
         f.write("\n".join(rapport))
 
     # arrêt de la session Spark

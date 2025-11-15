@@ -219,17 +219,17 @@ data_clean/*
 # Optionnel : garder les fichiers spécifiques comme des fichiers README ou .gitkeep
 !data_clean/**/.gitkeep
 
-# Ignorer tous les fichiers .parquet dans data_clean
-data_clean/**/*.parquet
+# Ignorer tous les fichiers .parquet dans data
+/data/**/*.parquet
 
-# # Ignorer tous les fichiers .txt dans data_clean
-# data_clean/**/*.txt
+# Ignorer les fichiers .snappy.parquet.crc dans data
+/data/**/*.snappy.parquet.crc
 
-# Ignorer les fichiers .snappy.parquet.crc dans data_clean
-data_clean/**/*.snappy.parquet.crc
+# Ignorer les fichiers _SUCCESS dans data
+/data/**/_SUCCESS
 
-# Ignorer les fichiers _SUCCESS dans data_clean
-data_clean/**/_SUCCESS
+# Ignorer les fichiers ._SUCCESS.crc dans data
+/data/**/._SUCCESS.crc
 
-# Ignorer les fichiers ._SUCCESS.crc dans data_clean
-data_clean/**/._SUCCESS.crc
+# Ignorer tous les fichiers .txt dans data
+/data/**/*.txt
