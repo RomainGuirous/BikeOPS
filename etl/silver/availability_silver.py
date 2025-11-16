@@ -1,28 +1,21 @@
 import os
-# import sys
-# # Ajouter le chemin racine du projet au PYTHONPATH
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-
 from pyspark.sql import SparkSession, functions as F
-from pyspark.sql.window import Window
+
 from etl.utils.udf import (
-    clean_positive_int_udf,
-    clean_date_udf,
-    clean_nb_bikes_udf,
+    clean_positive_int,
+    clean_date,
+    clean_nb_bikes,
 )
 from etl.utils.spark_functions import (
     read_csv_spark,
     apply_transformations,
+    process_report_and_cleanup,
+    drop_duplicates
 )
 
 if __name__ == "__main__":
     # creation Spark session
     spark = SparkSession.builder.master("local[*]").getOrCreate()
-
-    # initialisation des accumulateurs => pour rapport qualité
-    lignes_corrigees = spark.sparkContext.accumulator(0)
-    lignes_supprimees = spark.sparkContext.accumulator(0)
-    valeurs_invalides = spark.sparkContext.accumulator(0)
 
     # lecture du fichier CSV
     df = read_csv_spark(spark, "/app/data/data_raw/availability_raw.csv")
@@ -40,6 +33,12 @@ if __name__ == "__main__":
 
     # jointure pour ajouter la capacité
     df = df.join(capacity, on="station_id", how="left")
+    df.show(30)
+    
+
+    # nom des colonnes accumulateurs
+    lignes_corrigees = "lignes_corrigees"
+    valeurs_invalides = "valeurs_invalides"
 
     # nettoyage des données
     # score = nombre de champs invalides (null ou "") dans la ligne
@@ -74,46 +73,51 @@ if __name__ == "__main__":
     transformations = [
         {
             "col": "station_id",
-            "func": clean_positive_int_udf(lignes_corrigees, valeurs_invalides),
-            "args": [],
+            "func": clean_positive_int,
+            "args": [lignes_corrigees, valeurs_invalides],
         },
         {
             "col": "timestamp",
-            "func": clean_date_udf(lignes_corrigees, valeurs_invalides),
-            "args": [],
+            "func": clean_date,
+            "args": [lignes_corrigees, valeurs_invalides],
         },
         {
             "col": "bikes_available",
-            "func": clean_nb_bikes_udf(
-                lignes_corrigees, valeurs_invalides
-            ),
-            "args": ["slots_free", "capacity"],
+            "func": clean_nb_bikes,
+            "args": [lignes_corrigees, valeurs_invalides, "slots_free", "capacity"],
         },
         {
             "col": "slots_free",
-            "func": clean_nb_bikes_udf(
-                lignes_corrigees, valeurs_invalides
-            ),
-            "args": [],
+            "func": clean_nb_bikes,
+            "args": [
+                lignes_corrigees,
+                valeurs_invalides,
+                "bikes_available",
+                "capacity",
+            ],
         },
     ]
 
     df_clean = apply_transformations(
         df, transformations, score=True, drop=["capacity"]
     ).withColumn("date_partition", F.to_date(F.col("timestamp")))
+    df_clean.show(30)
 
-    # group by station_id et timestamp, order by score
-    dup_wind = Window.partitionBy("station_id", "timestamp").orderBy("score")
+    # génération du rapport de qualité et nettoyage des colonnes accumulateurs
+    df_clean, rapport_value = process_report_and_cleanup(df_clean)
+    df_clean.show(30)
 
-    # garder la ligne avec le score le plus bas (la meilleure)
-    df_dedup = (
-        df_clean.withColumn("rn", F.row_number().over(dup_wind))
-        .filter(F.col("rn") == 1)
-        .drop("score", "rn")
-    )
+    # suppression des doublons station_id,timestamp en gardant la ligne avec le score le plus bas
+    df_clean = drop_duplicates(df_clean, partition_cols=["station_id", "timestamp"], order_col="score")
 
-    # creation du répertoire data_clean s'il n'existe pas
-    os.makedirs("/app/data/data_clean/", exist_ok=True)
+    
+    
+    # suppression des lignes où toutes les valeurs sont nulles
+    df_clean = df_clean.dropna(how="all")
+    lignes_supprimees = lignes_brutes - df_clean.count()
+    
+    # creation du répertoire data_clean/silver s'il n'existe pas
+    os.makedirs("/app/data/data_clean/silver", exist_ok=True)
 
     # ======PANDAS======
     # # conversion en pandas pour sauvegarde en CSV
@@ -129,7 +133,7 @@ if __name__ == "__main__":
 
     # ======SPARK======
     df_clean.write.mode("overwrite").partitionBy("date_partition").parquet(
-        "/app/data/data_clean/availability_silver"
+        "/app/data/data_clean/silver/availability_silver"
     )
 
     # =====RAPPORT QUALITE=====
@@ -137,8 +141,8 @@ if __name__ == "__main__":
         "Rapport qualité - weather_silver",
         "-------------------------------------",
         f"- Lignes brutes : {lignes_brutes}",
-        f"- Lignes corrigées : {lignes_corrigees}",
-        f"- Lignes invalidées (remplacées par None) : {valeurs_invalides}",
+        f"- Lignes corrigées : {rapport_value['total_lignes_corrigees']}",
+        f"- Lignes invalidées (remplacées par None) : {rapport_value['total_valeurs_invalides']}",
         f"- Lignes supprimées : {lignes_supprimees}",
     ]
 
@@ -146,10 +150,13 @@ if __name__ == "__main__":
     os.makedirs("/app/data/data_clean/rapport_qualite", exist_ok=True)
 
     # Écriture du rapport qualité dans un fichier texte
-    with open("/app/data/data_clean/rapport_qualite/weather_rapport.txt", "w") as f:
+    with open(
+        "/app/data/data_clean/rapport_qualite/availability_silver_rapport.txt", "w"
+    ) as f:
         f.write("\n".join(rapport))
 
     # arrêt de la session Spark
     spark.stop()
 
+    # export PYTHONPATH=/app
     # spark-submit etl/silver/availability_silver.py
