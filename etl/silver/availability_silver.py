@@ -33,43 +33,14 @@ if __name__ == "__main__":
 
     # jointure pour ajouter la capacité
     df = df.join(capacity, on="station_id", how="left")
-    df.show(30)
+    df.show(50)
     
 
     # nom des colonnes accumulateurs
     lignes_corrigees = "lignes_corrigees"
     valeurs_invalides = "valeurs_invalides"
 
-    # nettoyage des données
-    # score = nombre de champs invalides (null ou "") dans la ligne
-    # df_clean = (
-    #     df.withColumn("station_id", clean_positive_int("station_id"))
-    #     .withColumn("timestamp", clean_date("timestamp"))
-    #     .withColumn(
-    #         "bikes_available",
-    #         clean_nb_bikes("bikes_available", "slots_free", "capacity"),
-    #     )
-    #     .withColumn(
-    #         "slots_free", clean_nb_bikes("slots_free", "bikes_available", "capacity")
-    #     )
-    #     .withColumn(
-    #         "score",
-    #         F.when(
-    #             F.col("station_id").isNull() | (F.col("station_id") == ""), 1
-    #         ).otherwise(0)
-    #         + F.when(
-    #             F.col("timestamp").isNull() | (F.col("timestamp") == ""), 1
-    #         ).otherwise(0)
-    #         + F.when(
-    #             F.col("bikes_available").isNull() | (F.col("bikes_available") == ""), 1
-    #         ).otherwise(0)
-    #         + F.when(
-    #             F.col("slots_free").isNull() | (F.col("slots_free") == ""), 1
-    #         ).otherwise(0),
-    #     )
-    #     .withColumn("date_partition", F.to_date(F.col("timestamp")))
-    #     .drop("capacity")
-    # )
+    # définition des  transformations à appliquer
     transformations = [
         {
             "col": "station_id",
@@ -84,16 +55,16 @@ if __name__ == "__main__":
         {
             "col": "bikes_available",
             "func": clean_nb_bikes,
-            "args": [lignes_corrigees, valeurs_invalides, "slots_free", "capacity"],
+            "args": ["slots_free", "capacity", lignes_corrigees, valeurs_invalides],
         },
         {
             "col": "slots_free",
             "func": clean_nb_bikes,
             "args": [
-                lignes_corrigees,
-                valeurs_invalides,
                 "bikes_available",
                 "capacity",
+                lignes_corrigees,
+                valeurs_invalides,
             ],
         },
     ]
@@ -101,16 +72,14 @@ if __name__ == "__main__":
     df_clean = apply_transformations(
         df, transformations, score=True, drop=["capacity"]
     ).withColumn("date_partition", F.to_date(F.col("timestamp")))
-    df_clean.show(30)
+    df_clean.show(50)
 
     # génération du rapport de qualité et nettoyage des colonnes accumulateurs
     df_clean, rapport_value = process_report_and_cleanup(df_clean)
-    df_clean.show(30)
+    df_clean.show(50)
 
     # suppression des doublons station_id,timestamp en gardant la ligne avec le score le plus bas
     df_clean = drop_duplicates(df_clean, partition_cols=["station_id", "timestamp"], order_col="score")
-
-    
     
     # suppression des lignes où toutes les valeurs sont nulles
     df_clean = df_clean.dropna(how="all")

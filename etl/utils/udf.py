@@ -159,7 +159,9 @@ def clean_rain_mm(
         ]
     )
 )
-def clean_weather(s: str, ligne_corrigee: bool, ligne_invalide: bool) -> tuple[str | None, bool, bool]:
+def clean_weather(
+    s: str, ligne_corrigee: bool, ligne_invalide: bool
+) -> tuple[str | None, bool, bool]:
     """
     Nettoie et valide une condition météorologique donnée sous forme de chaîne de caractères.
 
@@ -344,30 +346,35 @@ def clean_nb_bikes(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
-    if not velo_dispo_string or not velo_dispo_string.isnumeric():
-        if places_libres and capacity:
-            try:
-                diff = int(capacity) - int(places_libres)
+    try:
+        # Vérification des valeurs nulles ou non numériques pour places_libres et capacity
+        places_libres_int = int(places_libres) if isinstance(places_libres, str) and places_libres.isnumeric() else None
+        capacity_int = int(capacity) if isinstance(capacity, str) and capacity.isnumeric() else None
+
+        if (not isinstance(velo_dispo_string, str)) or (not velo_dispo_string.isnumeric()):
+            if places_libres_int is not None and capacity_int is not None:
+                diff = capacity_int - places_libres_int
                 if diff >= 0:
                     ligne_corrigee = True
                     return diff, ligne_corrigee, ligne_invalide
                 else:
                     ligne_corrigee = True
                     return 0, ligne_corrigee, ligne_invalide
-            except (ValueError, TypeError):
+            else:
                 ligne_invalide = True
                 return None, ligne_corrigee, ligne_invalide
 
-    try:
+        # Vérification de velo_dispo_string
         val = int(velo_dispo_string)
         if val < 0:
             ligne_corrigee = True
             return 0, ligne_corrigee, ligne_invalide
-        elif val > int(capacity):
+        elif capacity_int is not None and val > capacity_int:
             ligne_corrigee = True
-            return int(capacity), ligne_corrigee, ligne_invalide
+            return capacity_int, ligne_corrigee, ligne_invalide
         else:
             return val, ligne_corrigee, ligne_invalide
+
     except (ValueError, TypeError):
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
