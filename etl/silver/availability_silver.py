@@ -1,5 +1,5 @@
 import os
-from pyspark.sql import SparkSession, functions as F
+from pyspark.sql import SparkSession, DataFrame, functions as F
 
 from etl.utils.udf import (
     clean_positive_int,
@@ -10,81 +10,98 @@ from etl.utils.spark_functions import (
     read_csv_spark,
     apply_transformations,
     process_report_and_cleanup,
-    drop_duplicates
+    drop_duplicates,
 )
 
 if __name__ == "__main__":
     # creation Spark session
     spark = SparkSession.builder.master("local[*]").getOrCreate()
 
-    # lecture du fichier CSV
-    df = read_csv_spark(spark, "/app/data/data_raw/availability_raw.csv")
+    def create_silver_availability_df() -> tuple[DataFrame, dict]:
+        """
+        Création du DataFrame silver availability avec nettoyage et rapport qualité.
 
-    # nombre de lignes brutes => pour rapport qualité
-    lignes_brutes = df.count()
+        Returns:
+            df_clean (DataFrame): DataFrame Spark nettoyé.
+            rapport_value (dict): Rapport de qualité des données.
+                - 'total_lignes_brutes': Nombre de lignes brutes.
+                - 'total_lignes_corrigees': Nombre total de lignes corrigées.
+                - 'total_valeurs_invalides': Nombre total de valeurs invalides.
+                - 'total_lignes_supprimees': Nombre de lignes supprimées.
+        """
+        # lecture du fichier CSV
+        df = read_csv_spark(spark, "/app/data/data_raw/availability_raw.csv")
 
-    # extraction colonnes station_id et capacity depuis stations.csv
-    capacity = read_csv_spark(
-        spark,
-        "/app/data/data_raw/stations.csv",
-        ["station_id", "capacity"],
-        delimiter=",",
-    )
+        # nombre de lignes brutes => pour rapport qualité
+        lignes_brutes = df.count()
 
-    # jointure pour ajouter la capacité
-    df = df.join(capacity, on="station_id", how="left")
-    df.show(50)
+        # extraction colonnes station_id et capacity depuis stations.csv
+        capacity = read_csv_spark(
+            spark,
+            "/app/data/data_raw/stations.csv",
+            ["station_id", "capacity"],
+            delimiter=",",
+        )
+
+        # jointure pour ajouter la capacité
+        df = df.join(capacity, on="station_id", how="left")
+
+        # nom des colonnes accumulateurs
+        lignes_corrigees = "lignes_corrigees"
+        valeurs_invalides = "valeurs_invalides"
+
+        # définition des  transformations à appliquer
+        transformations = [
+            {
+                "col": "station_id",
+                "func": clean_positive_int,
+                "args": [lignes_corrigees, valeurs_invalides],
+            },
+            {
+                "col": "timestamp",
+                "func": clean_date,
+                "args": [lignes_corrigees, valeurs_invalides],
+            },
+            {
+                "col": "bikes_available",
+                "func": clean_nb_bikes,
+                "args": ["slots_free", "capacity", lignes_corrigees, valeurs_invalides],
+            },
+            {
+                "col": "slots_free",
+                "func": clean_nb_bikes,
+                "args": [
+                    "bikes_available",
+                    "capacity",
+                    lignes_corrigees,
+                    valeurs_invalides,
+                ],
+            },
+        ]
+
+        df_clean = apply_transformations(
+            df, transformations, score=True, drop=["capacity"]
+        ).withColumn("date_partition", F.to_date(F.col("timestamp")))
+
+        # génération du rapport de qualité et nettoyage des colonnes accumulateurs
+        df_clean, rapport_value = process_report_and_cleanup(df_clean)
+
+        # suppression des doublons station_id,timestamp en gardant la ligne avec le score le plus bas
+        df_clean = drop_duplicates(
+            df_clean, partition_cols=["station_id", "timestamp"], order_col="score"
+        )
+
+        # suppression des lignes où toutes les valeurs sont nulles
+        df_clean = df_clean.dropna(how="all")
+        lignes_supprimees = lignes_brutes - df_clean.count()
+
+        rapport_value["total_lignes_brutes"] = lignes_brutes
+        rapport_value["total_lignes_supprimees"] = lignes_supprimees
+
+        return df_clean, rapport_value
     
+    df_clean, rapport_value = create_silver_availability_df()
 
-    # nom des colonnes accumulateurs
-    lignes_corrigees = "lignes_corrigees"
-    valeurs_invalides = "valeurs_invalides"
-
-    # définition des  transformations à appliquer
-    transformations = [
-        {
-            "col": "station_id",
-            "func": clean_positive_int,
-            "args": [lignes_corrigees, valeurs_invalides],
-        },
-        {
-            "col": "timestamp",
-            "func": clean_date,
-            "args": [lignes_corrigees, valeurs_invalides],
-        },
-        {
-            "col": "bikes_available",
-            "func": clean_nb_bikes,
-            "args": ["slots_free", "capacity", lignes_corrigees, valeurs_invalides],
-        },
-        {
-            "col": "slots_free",
-            "func": clean_nb_bikes,
-            "args": [
-                "bikes_available",
-                "capacity",
-                lignes_corrigees,
-                valeurs_invalides,
-            ],
-        },
-    ]
-
-    df_clean = apply_transformations(
-        df, transformations, score=True, drop=["capacity"]
-    ).withColumn("date_partition", F.to_date(F.col("timestamp")))
-    df_clean.show(50)
-
-    # génération du rapport de qualité et nettoyage des colonnes accumulateurs
-    df_clean, rapport_value = process_report_and_cleanup(df_clean)
-    df_clean.show(50)
-
-    # suppression des doublons station_id,timestamp en gardant la ligne avec le score le plus bas
-    df_clean = drop_duplicates(df_clean, partition_cols=["station_id", "timestamp"], order_col="score")
-    
-    # suppression des lignes où toutes les valeurs sont nulles
-    df_clean = df_clean.dropna(how="all")
-    lignes_supprimees = lignes_brutes - df_clean.count()
-    
     # creation du répertoire data_clean/silver s'il n'existe pas
     os.makedirs("/app/data/data_clean/silver", exist_ok=True)
 
@@ -109,10 +126,10 @@ if __name__ == "__main__":
     rapport = [
         "Rapport qualité - weather_silver",
         "-------------------------------------",
-        f"- Lignes brutes : {lignes_brutes}",
+        f"- Lignes brutes : {rapport_value['total_lignes_brutes']}",
         f"- Lignes corrigées : {rapport_value['total_lignes_corrigees']}",
         f"- Lignes invalidées (remplacées par None) : {rapport_value['total_valeurs_invalides']}",
-        f"- Lignes supprimées : {lignes_supprimees}",
+        f"- Lignes supprimées : {rapport_value['total_lignes_supprimees']}",
     ]
 
     # Création du répertoire rapport_qualite s'il n'existe pas

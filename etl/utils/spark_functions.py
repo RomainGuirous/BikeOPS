@@ -118,7 +118,9 @@ def process_report_and_cleanup(df: DataFrame) -> dict[str, int]:
         df (DataFrame): Le DataFrame Spark à traiter.
 
     Returns:
-        dict[str, int]: Un dictionnaire contenant le rapport.
+        dict(str, int): Un dictionnaire contenant le rapport.
+            - 'total_lignes_corrigees': Nombre total de lignes corrigées.
+            - 'total_valeurs_invalides': Nombre total de valeurs invalides.
     """
     # Compter les valeurs True dans les colonnes spécifiques
     rapport = (
