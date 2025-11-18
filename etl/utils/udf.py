@@ -1,5 +1,4 @@
 from pyspark.sql import functions as F, types as T
-import pandas as pd
 import re
 
 
@@ -39,14 +38,50 @@ def clean_date(
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
     try:
-        d = pd.to_datetime(date_string, errors="coerce")
-        if pd.isnull(d):
-            ligne_invalide = True
-            return None, ligne_corrigee, ligne_invalide
-        formated_date = d.strftime("%Y-%m-%d %H:%M:%S")
-        if formated_date != date_string:
+        # etape 0 remplacer les "T" par des espaces
+        if re.search(r"T", date_string):
             ligne_corrigee = True
-        return formated_date, ligne_corrigee, ligne_invalide
+            date_string = date_string.replace("T", " ")
+
+        # etape 1 : remplacer les "/" et "." par "-"
+        if re.search(r"[./]", date_string):
+            ligne_corrigee = True
+            date_string = re.sub(r"[./]", "-", date_string.strip())
+
+        # etape 2 : couper la date et l'heure si besoin
+        if " " in date_string:
+            date_part = date_string.split(" ")[0]
+            hour_part = date_string.split(" ")[1]
+        else:
+            date_part = date_string[:10]
+            hour_part = date_string[10:]
+
+        # etape 3 : reformater la date
+        reformatted_date = None  # Initialiser la variable pour éviter l'erreur
+        if re.match(r"^\d{2}-\d{2}-\d{4}$", date_part):
+            reformatted_date = re.sub(
+                r"^(\d{2})-(\d{2})-(\d{4}$)", r"\3-\2-\1", date_part
+            )
+            ligne_corrigee = True
+        else:
+            reformatted_date = date_part  # Garder la date telle quelle si non modifiable
+
+        # etape 4 : formater l'heure si besoin
+        if len(hour_part.strip()) == 0:
+            hour_part = "00:00:00"
+            ligne_corrigee = True
+        elif re.match(r"^\d{2}:\d{2}$", hour_part.strip()):
+            hour_part = hour_part.strip() + ":00"
+            ligne_corrigee = True
+        elif re.match(r"^\d{2}:\d{2}:\d{2}.+", hour_part.strip()):
+            hour_part = hour_part.strip()[:8]
+            ligne_corrigee = True
+
+        # etape 5 : combiner date et heure
+        final_date_string = reformatted_date + " " + hour_part.strip()
+
+        return final_date_string, ligne_corrigee, ligne_invalide
+
     except (ValueError, TypeError):
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide

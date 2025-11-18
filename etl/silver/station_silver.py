@@ -1,5 +1,5 @@
 import os
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from etl.utils.spark_functions import read_csv_spark, create_silver_df, quality_rapport
 from etl.utils.udf import (
     clean_positive_int,
@@ -9,30 +9,18 @@ from etl.utils.udf import (
 )
 
 
-if __name__ == "__main__":
-    # ======CREATION DATAFRAME======
+def create_silver_station_df(spark: SparkSession) -> tuple[DataFrame, dict]:
+    """
+    Crée un DataFrame Spark nettoyé pour les données des stations.
 
-    # creation Spark session
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    Args:
+        spark (SparkSession): La session Spark active.
 
-    # def create_silver_availability_df():
-    #     # lecture du fichier CSV
-    #     df = read_csv_spark(spark, "/app/data/data_raw/stations.csv", delimiter=",")
-
-    #     # nettoyage des données
-    #     df_clean = (
-    #         df.withColumn("station_id", clean_positive_int(F.col("station_id")))
-    #         .withColumn("station_name", clean_station_name(F.col("station_name")))
-    #         .withColumn("lat", clean_latitude(F.col("lat")))
-    #         .withColumn("lon", clean_longitude(F.col("lon")))
-    #         .withColumn(
-    #             "capacity", clean_positive_int(F.col("capacity"))
-    #         )
-    #     )
-
-    #     return df_clean
-
-    # lecture du fichier CSV
+    Returns:
+        tuple: Un tuple contenant :
+            - df_station_clean (DataFrame): DataFrame Spark nettoyé des données des stations.
+            - station_rapport_value (dict): Rapport de qualité des données des stations.
+    """
     df = read_csv_spark(spark, "/app/data/data_raw/stations.csv", delimiter=",")
 
     transformations = [
@@ -63,9 +51,20 @@ if __name__ == "__main__":
         },
     ]
 
-    df_clean, rapport_value = create_silver_df(
+    df_station_clean, station_rapport_value = create_silver_df(
         df, transformations, score=False, duplicates_drop=False, partition_col=None
     )
+
+    return df_station_clean, station_rapport_value
+
+
+if __name__ == "__main__":
+    # ======CREATION DATAFRAME======
+
+    # creation Spark session
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df_clean, rapport_value = create_silver_station_df(spark)
 
     # ======RAPPORT QUALITE======
 
@@ -80,7 +79,9 @@ if __name__ == "__main__":
 
     # utiliser pandas pour créer csv
     pandas_df = df_clean.toPandas()
-    pandas_df.to_csv("/app/data/data_clean/silver/stations_silver/stations_silver.csv", index=False)
+    pandas_df.to_csv(
+        "/app/data/data_clean/silver/stations_silver/stations_silver.csv", index=False
+    )
 
     # ======EN SPARK====== (quel intérêt ?)
     # df_clean.write.mode("overwrite") \

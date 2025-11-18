@@ -36,7 +36,6 @@ CMD ["/bin/bash"]
 # avec powershell:
 # docker run -it --rm -v "${PWD}:/app" --name cont_test_bike --entrypoint /bin/bash env_test_bike
 
-# avec git-bash:
-# MSYS_NO_PATHCONV=1 docker run -it --rm -v "$(pwd):/app" -e PYTHONPATH=/app --name cont_test_bike --entrypoint /bin/bash env_test_bike
+# avec git-bash:# MSYS_NO_PATHCONV=1 docker run -it --rm -v "$(pwd):/app" -e PYTHONPATH=/app --name cont_test_bike --entrypoint /bin/bash env_test_bike
 # ==> Git Bash (MSYS) transforme automatiquement les arguments qui ressemblent à des chemins Unix en chemins Windows.
 # L'option MSYS_NO_PATHCONV=1 empêche cette conversion automatique, permettant ainsi de monter correctement les volumes Docker.

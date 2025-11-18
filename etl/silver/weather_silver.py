@@ -1,5 +1,5 @@
 import os
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from etl.utils.spark_functions import (
     read_csv_spark,
     create_silver_df,
@@ -13,12 +13,18 @@ from etl.utils.udf import (
 )
 
 
-if __name__ == "__main__":
-    # ======CREATION DATAFRAME======
+def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
+    """
+    Crée un DataFrame Spark nettoyé pour les données météo.
 
-    # creation Spark session
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    Args:
+        spark (SparkSession): La session Spark active.
 
+    Returns:
+        tuple: Un tuple contenant :
+        - df_weather_clean (DataFrame): DataFrame Spark nettoyé des données météo.
+        - weather_rapport_value (dict): Rapport de qualité des données météo.
+    """
     # lecture du fichier CSV
     df = read_csv_spark(spark, "/app/data/data_raw/weather_raw.csv")
 
@@ -46,13 +52,24 @@ if __name__ == "__main__":
         },
     ]
 
-    df_clean, rapport_value = create_silver_df(
+    df_weather_clean, weather_rapport_value = create_silver_df(
         df,
         transformations,
         score=False,
         duplicates_drop=False,
         partition_col="timestamp",
     )
+
+    return df_weather_clean, weather_rapport_value
+
+
+if __name__ == "__main__":
+    # ======CREATION DATAFRAME======
+
+    # creation Spark session
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df_clean, rapport_value = create_silver_weather_df(spark)
 
     # =====RAPPORT QUALITE=====
 

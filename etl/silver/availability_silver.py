@@ -1,5 +1,5 @@
 import os
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 
 from etl.utils.udf import (
     clean_positive_int,
@@ -12,12 +12,19 @@ from etl.utils.spark_functions import (
     quality_rapport,
 )
 
-if __name__ == "__main__":
-    # ======CREATION DATAFRAME======
 
-    # creation Spark session
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
+def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]:
+    """
+    Crée un DataFrame Spark nettoyé pour les données de disponibilité des vélos.
 
+    Args:
+        spark (SparkSession): La session Spark active.
+
+    Returns:
+        tuple: Un tuple contenant :
+        - df_availability_clean (DataFrame): DataFrame Spark nettoyé des données de disponibilité.
+        - availability_rapport_value (dict): Rapport de qualité des données de disponibilité.
+    """
     # lecture du fichier CSV
     df = read_csv_spark(spark, "/app/data/data_raw/availability_raw.csv")
 
@@ -47,7 +54,12 @@ if __name__ == "__main__":
         {
             "col": "bikes_available",
             "func": clean_nb_bikes,
-            "args": ["slots_free", "capacity", "lignes_corrigees", "valeurs_invalides"],
+            "args": [
+                "slots_free",
+                "capacity",
+                "lignes_corrigees",
+                "valeurs_invalides",
+            ],
         },
         {
             "col": "slots_free",
@@ -62,9 +74,24 @@ if __name__ == "__main__":
     ]
 
     # création du DataFrame silver avec nettoyage et rapport qualité
-    df_clean, rapport_value = create_silver_df(
-        df, transformations, score=True, duplicates_drop=True, partition_col="timestamp"
+    df_availability_clean, availability_rapport_value = create_silver_df(
+        df,
+        transformations,
+        score=True,
+        duplicates_drop=True,
+        partition_col="timestamp",
     )
+
+    return df_availability_clean, availability_rapport_value
+
+
+if __name__ == "__main__":
+    # ======CREATION DATAFRAME======
+
+    # creation Spark session
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df_clean, rapport_value = create_silver_availability_df(spark)
 
     # =====RAPPORT QUALITE=====
 
