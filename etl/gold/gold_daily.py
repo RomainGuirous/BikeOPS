@@ -2,6 +2,8 @@ import os
 from pyspark.sql import SparkSession, functions as F
 
 from etl.silver.availability_silver import create_silver_availability_df
+from etl.silver.weather_silver import create_silver_weather_df
+
 
 if __name__ == "__main__":
     # creation Spark session
@@ -11,12 +13,7 @@ if __name__ == "__main__":
     df_availability = create_silver_availability_df()[0]
 
     # extraction colonnes station_id et capacity depuis stations.csv
-    df_stations = read_csv_spark(
-        spark,
-        "/app/data/data_raw/stations.csv",
-        ["station_id", "capacity"],
-        delimiter=",",
-    )
+    df_stations = create_silver_weather_df()[0]
 
     df_weather = read_csv_spark(
         spark,
@@ -24,3 +21,6 @@ if __name__ == "__main__":
         ["date", "temperature", "precipitation"],
         delimiter=",",
     )
+
+    # export PYTHONPATH=/app
+    # spark-submit etl/gold/gold_daily.py

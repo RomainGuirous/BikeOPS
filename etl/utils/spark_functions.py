@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession, DataFrame, functions as F
 from pyspark.sql.window import Window
+import os
 
 
 def read_csv_spark(
@@ -58,9 +59,8 @@ def apply_transformations(
         DataFrame: Le DataFrame transformé.
     """
     # Initialiser les colonnes accumulateurs avec False
-    df = (
-        df.withColumn("lignes_corrigees", F.lit(False))
-        .withColumn("valeurs_invalides", F.lit(False))
+    df = df.withColumn("lignes_corrigees", F.lit(False)).withColumn(
+        "valeurs_invalides", F.lit(False)
     )
 
     for t in transformations:
@@ -73,17 +73,14 @@ def apply_transformations(
         df = df.withColumn(col_name, func(*([F.col(col_name)] + args), **kwargs))
 
         # Mise à jour des colonnes accumulateurs
-        df = (
-            df.withColumn(
-                "lignes_corrigees",
-                F.col(f"{col_name}.ligne_corrigee") | F.col("lignes_corrigees"),
-            )
-            .withColumn(
-                "valeurs_invalides",
-                F.col(f"{col_name}.ligne_invalide") | F.col("valeurs_invalides"),
-            )
+        df = df.withColumn(
+            "lignes_corrigees",
+            F.col(f"{col_name}.ligne_corrigee") | F.col("lignes_corrigees"),
+        ).withColumn(
+            "valeurs_invalides",
+            F.col(f"{col_name}.ligne_invalide") | F.col("valeurs_invalides"),
         )
-        
+
         # Remplace la colonne par le champ nettoyé
         df = df.withColumn(col_name, F.col(f"{col_name}.value"))
 
@@ -141,7 +138,10 @@ def process_report_and_cleanup(df: DataFrame) -> dict[str, int]:
 
     return df, rapport
 
-def drop_duplicates(df: DataFrame, partition_cols: list[str], order_col: str) -> DataFrame:
+
+def drop_duplicates(
+    df: DataFrame, partition_cols: list[str], order_col: str
+) -> DataFrame:
     """
     Supprime les doublons dans un DataFrame Spark en gardant la ligne avec la meilleure valeur
     dans une colonne spécifiée.
@@ -165,3 +165,98 @@ def drop_duplicates(df: DataFrame, partition_cols: list[str], order_col: str) ->
     df = df.filter(F.col("row_number") == 1).drop("row_number")
 
     return df
+
+
+def create_silver_df(
+    df: DataFrame,
+    transformations: list[dict],
+    *,
+    score: bool = False,
+    duplicates_drop: bool = False,
+    partition_col: str = None
+) -> tuple[DataFrame, dict]:
+    """
+        Création du DataFrame silver avec nettoyage et rapport qualité.
+         /!\ Nécessite une session Spark existante. /!\ 
+
+        Args:
+            df (DataFrame): Le DataFrame brut à nettoyer.
+            transformations (list[dict]): Liste des transformations à appliquer.
+                dictionnaire avec les clés :
+                - 'col' (str): Le nom de la colonne à transformer.
+                - 'func' (callable): La fonction de transformation à appliquer.
+                - 'args' (list, optional): Arguments positionnels supplémentaires pour la fonction.
+            partition_col (str, optional): Colonne pour partitionner les données. Defaults to None.
+
+        Returns:
+            tuple: Un tuple contenant :
+            - df_clean (DataFrame): 
+                DataFrame Spark nettoyé.
+            - rapport_value (dict): 
+                Rapport de qualité des données, avec les clés suivantes :
+                - 'total_lignes_brutes' (int): Nombre de lignes brutes.
+                - 'total_lignes_corrigees' (int): Nombre total de lignes corrigées.
+                - 'total_valeurs_invalides' (int): Nombre total de valeurs invalides.
+                - 'total_lignes_supprimees' (int): Nombre de lignes supprimées.
+
+        """
+    # nombre de lignes brutes => pour rapport qualité
+    lignes_brutes = df.count()
+
+    # suite au transformations udf, timestamp est un struct avec value, ligne_corrigee, ligne_invalide
+    df_clean = apply_transformations(df, transformations, score=score)
+
+    if partition_col:
+        df_clean = df_clean.withColumn(
+            "date_partition", F.to_date(F.col(partition_col))
+        )
+
+    # génération du rapport de qualité et nettoyage des colonnes accumulateurs
+    df_clean, rapport_value = process_report_and_cleanup(df_clean)
+
+    # suppression des doublons si demandé
+    if duplicates_drop:
+        df_clean = drop_duplicates(
+            df_clean, partition_cols=["station_id", "timestamp"], order_col="score"
+        )
+
+    # suppression des lignes où toutes les valeurs sont nulles
+    df_clean = df_clean.dropna(how="all")
+    lignes_supprimees = lignes_brutes - df_clean.count()
+
+    # mise à jour du rapport qualité
+    rapport_value["total_lignes_supprimees"] = lignes_supprimees
+    rapport_value["total_lignes_brutes"] = lignes_brutes
+
+    return df_clean, rapport_value
+
+def quality_rapport(rapport_value: dict[str, int], rapport_file_name: str) -> None:
+    """
+    Génère un rapport de qualité des données et l'écrit dans un fichier texte.
+
+    Args:
+        rapport_value (dict): Dictionnaire contenant les statistiques de qualité des données.
+        rapport_file_name (str): Nom du fichier dans lequel écrire le rapport.
+
+    Returns:
+        None (écrit le rapport dans un fichier texte (/data/data_clean/rapport_qualite/)).
+    """
+
+    # =====RAPPORT QUALITE=====
+    rapport = [
+        f"Rapport qualité - {rapport_file_name}",
+        "-------------------------------------",
+        f"- Lignes brutes : {rapport_value['total_lignes_brutes']}",
+        f"- Lignes corrigées : {rapport_value['total_lignes_corrigees']}",
+        f"- Lignes invalidées (remplacées par None) : {rapport_value['total_valeurs_invalides']}",
+        f"- Lignes supprimées : {rapport_value['total_lignes_supprimees']}",
+    ]
+
+    # Création du répertoire rapport_qualite s'il n'existe pas
+    os.makedirs("/app/data/data_clean/rapport_qualite", exist_ok=True)
+
+    # Écriture du rapport qualité dans un fichier texte
+    with open(
+        f"/app/data/data_clean/rapport_qualite/{rapport_file_name}_rapport.txt", "w"
+    ) as f:
+        f.write("\n".join(rapport))

@@ -160,30 +160,33 @@ def clean_rain_mm(
     )
 )
 def clean_weather(
-    s: str, ligne_corrigee: bool, ligne_invalide: bool
+    weather_condition: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[str | None, bool, bool]:
     """
     Nettoie et valide une condition météorologique donnée sous forme de chaîne de caractères.
 
     Args:
-        s (str): La condition météorologique sous forme de chaîne de caractères.
+        weather_condition (str): La condition météorologique sous forme de chaîne de caractères.
+        ligne_corrigee (bool): Indique si la ligne a été corrigée.
         ligne_invalide (bool): Indique si la ligne est invalide.
 
     Returns:
-        tuple(float, bool):
+        tuple(float, bool, bool):
             - La condition météorologique validée (ou None si invalide).
+            - Un booléen indiquant si la ligne a été corrigée.
             - Un booléen indiquant si la ligne est invalide.
 
         En Spark, le retour est représenté comme un STRUCT avec les champs :
             - value (StringType)
+            - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
-    if not s:
+    if not weather_condition:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
     try:
-        if s in ["Rain", "Cloudy", "Clear", "Drizzle", "Fog"]:
-            return s, ligne_corrigee, ligne_invalide
+        if weather_condition in ["Rain", "Cloudy", "Clear", "Drizzle", "Fog"]:
+            return weather_condition, ligne_corrigee, ligne_invalide
         else:
             ligne_invalide = True
             return None, ligne_corrigee, ligne_invalide
@@ -192,74 +195,143 @@ def clean_weather(
         return None, ligne_corrigee, ligne_invalide
 
 
-@F.udf(T.FloatType())
-def clean_latitude(s: str) -> float | None:
+@F.udf(
+    T.StructType(
+        [
+            T.StructField("value", T.FloatType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+)
+def clean_latitude(
+    latitude: str, ligne_corrigee: bool, ligne_invalide: bool
+) -> tuple[float | None, bool, bool]:
     """
     Nettoie et valide une latitude donnée sous forme de chaîne de caractères.
 
     Args:
-        s (str): La latitude sous forme de chaîne de caractères.
+        latitude (str): La latitude sous forme de chaîne de caractères.
+        ligne_corrigee (bool): Indique si la ligne a été corrigée.
+        ligne_invalide (bool): Indique si la ligne est invalide.
 
     Returns:
-        float | None: La latitude validée (ou None si invalide).
+        tuple(float | None, bool, bool):
+            - La latitude validée (ou None si invalide).
+            - Un booléen indiquant si la ligne a été corrigée.
+            - Un booléen indiquant si la ligne est invalide.
 
-        En Spark, le retour est représenté comme un champ FloatType.
+        En Spark, le retour est représenté comme un STRUCT avec les champs :
+            - value (FloatType)
+            - ligne_corrigee (BooleanType)
+            - ligne_invalide (BooleanType)
     """
-    if not s:
-        return None
+    if not latitude:
+        ligne_invalide = True
+        return None, ligne_corrigee, ligne_invalide
     try:
-        val = float(s)
-        return val if val <= 90 and val >= -90 else None
+        val = float(latitude)
+        if val <= 90 and val >= -90:
+            return val, ligne_corrigee, ligne_invalide
+        else:
+            ligne_invalide = True
+            return None, ligne_corrigee, ligne_invalide
     except (ValueError, TypeError):
-        return None
+        ligne_invalide = True
+        return None, ligne_corrigee, ligne_invalide
 
 
-@F.udf(T.FloatType())
-def clean_longitude(s: str) -> float | None:
+@F.udf(
+    T.StructType(
+        [
+            T.StructField("value", T.FloatType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+)
+def clean_longitude(
+    longitude: str, ligne_corrigee: bool, ligne_invalide: bool
+) -> tuple[float | None, bool, bool]:
     """
     Nettoie et valide une longitude donnée sous forme de chaîne de caractères.
 
     Args:
-        s (str): La longitude sous forme de chaîne de caractères.
+        longitude (str): La longitude sous forme de chaîne de caractères.
+        ligne_corrigee (bool): Indique si la ligne a été corrigée.
+        ligne_invalide (bool): Indique si la ligne est invalide.
 
     Returns:
-        float | None: La longitude validée (ou None si invalide).
+        tuple(float | None, bool, bool):
+            - La longitude validée (ou None si invalide).
+            - Un booléen indiquant si la ligne a été corrigée.
+            - Un booléen indiquant si la ligne est invalide.
 
-        En Spark, le retour est représenté comme un champ FloatType.
+        En Spark, le retour est représenté comme un STRUCT avec les champs :
+            - value (FloatType)
+            - ligne_corrigee (BooleanType)
+            - ligne_invalide (BooleanType)
     """
-    if not s:
-        return None
+    if not longitude:
+        ligne_invalide = True
+        return None, ligne_corrigee, ligne_invalide
     try:
-        val = float(s)
-        return val if val <= 180 and val >= -180 else None
+        val = float(longitude)
+        if val <= 180 and val >= -180:
+            return val, ligne_corrigee, ligne_invalide
+        else:
+            ligne_invalide = True
+            return None, ligne_corrigee, ligne_invalide
     except (ValueError, TypeError):
-        return None
+        ligne_invalide = True
+        return None, ligne_corrigee, ligne_invalide
 
 
-@F.udf(T.StringType())
-def clean_station_name(s: str) -> str | None:
+@F.udf(
+    T.StructType(
+        [
+            T.StructField("value", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+)
+def clean_station_name(
+    s: str, ligne_corrigee: bool, ligne_invalide: bool
+) -> tuple[str | None, bool, bool]:
     """
     Nettoie et valide un nom de station donné sous forme de chaîne de caractères.
 
     Args:
         s (str): Le nom de la station sous forme de chaîne de caractères.
+        ligne_corrigee (bool): Indique si la ligne a été corrigée.
+        ligne_invalide (bool): Indique si la ligne est invalide.
 
     Returns:
-        str | None: Le nom de la station validé (ou None si invalide).
+        tuple(str | None, bool, bool):
+            - Le nom de la station validé (ou None si invalide).
+            - Un booléen indiquant si la ligne a été corrigée.
+            - Un booléen indiquant si la ligne est invalide.
 
-        En Spark, le retour est représenté comme un champ StringType.
+        En Spark, le retour est représenté comme un STRUCT avec les champs :
+            - value (StringType)
+            - ligne_corrigee (BooleanType)
+            - ligne_invalide (BooleanType)
     """
     if not s:
-        return None
+        ligne_invalide = True
+        return None, ligne_corrigee, ligne_invalide
     try:
         pattern = r"^Lille - Station \d{2}$"
         if re.fullmatch(pattern, s):
-            return s
+            return s, ligne_corrigee, ligne_invalide
         else:
-            return None
+            ligne_invalide = True
+            return None, ligne_corrigee, ligne_invalide
 
     except (ValueError, TypeError):
-        return None
+        ligne_invalide = True
+        return None, ligne_corrigee, ligne_invalide
 
 
 @F.udf(
@@ -348,10 +420,20 @@ def clean_nb_bikes(
     """
     try:
         # Vérification des valeurs nulles ou non numériques pour places_libres et capacity
-        places_libres_int = int(places_libres) if isinstance(places_libres, str) and places_libres.isnumeric() else None
-        capacity_int = int(capacity) if isinstance(capacity, str) and capacity.isnumeric() else None
+        places_libres_int = (
+            int(places_libres)
+            if isinstance(places_libres, str) and places_libres.isnumeric()
+            else None
+        )
+        capacity_int = (
+            int(capacity)
+            if isinstance(capacity, str) and capacity.isnumeric()
+            else None
+        )
 
-        if (not isinstance(velo_dispo_string, str)) or (not velo_dispo_string.isnumeric()):
+        if (not isinstance(velo_dispo_string, str)) or (
+            not velo_dispo_string.isnumeric()
+        ):
             if places_libres_int is not None and capacity_int is not None:
                 diff = capacity_int - places_libres_int
                 if diff >= 0:
