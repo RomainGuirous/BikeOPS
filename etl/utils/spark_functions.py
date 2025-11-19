@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession, DataFrame, functions as F
 from pyspark.sql.window import Window
 import os
+import pyspark.sql.types as T
 
 
 def read_csv_spark(
@@ -83,6 +84,18 @@ def apply_transformations(
 
         # Remplace la colonne par le champ nettoyé
         df = df.withColumn(col_name, F.col(f"{col_name}.value"))
+
+        # # Afficher le schéma après chaque transformation pour vérifier le type de colonne
+        # print(f"Schéma après transformation de {col_name}:")
+        # df.printSchema()
+
+        # # Vérifier si la colonne est encore un struct après transformation
+        # if isinstance(df.schema[col_name].dataType, T.StructType):
+        #     print(
+        #         f"Attention : La colonne {col_name} est encore un struct après transformation !"
+        #     )
+        # else:
+        #     print(f"La colonne {col_name} a été correctement transformée.")
 
     # compte le nombre de colonnes contenant des valeurs null ou vides pour chaque ligne
     if score:
@@ -173,7 +186,8 @@ def create_silver_df(
     *,
     score: bool = False,
     duplicates_drop: bool = False,
-    partition_col: str = None
+    partition_col: str = None,
+    drop_cols: list[str] = None,
 ) -> tuple[DataFrame, dict]:
     """
         Création du DataFrame silver avec nettoyage et rapport qualité.
@@ -228,7 +242,11 @@ def create_silver_df(
     rapport_value["total_lignes_supprimees"] = lignes_supprimees
     rapport_value["total_lignes_brutes"] = lignes_brutes
 
+    if drop_cols:
+        df_clean = df_clean.drop(*drop_cols)
+
     return df_clean, rapport_value
+
 
 def quality_rapport(rapport_value: dict[str, int], rapport_file_name: str) -> None:
     """

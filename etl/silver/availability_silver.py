@@ -1,5 +1,5 @@
 import os
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import SparkSession, DataFrame, functions as F
 
 from etl.utils.udf import (
     clean_positive_int,
@@ -80,6 +80,7 @@ def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]
         score=True,
         duplicates_drop=True,
         partition_col="timestamp",
+        drop_cols=["capacity", "score"],
     )
 
     return df_availability_clean, availability_rapport_value
@@ -92,6 +93,17 @@ if __name__ == "__main__":
     spark = SparkSession.builder.master("local[*]").getOrCreate()
 
     df_clean, rapport_value = create_silver_availability_df(spark)
+
+    # Filtrer les lignes où "bikes_available" ou "slots_free" sont null ou None
+    df_partial_null_values = df_clean.filter(
+        (
+            (F.col("slots_free").isNull() & F.col("bikes_available").isNull())
+            & F.col("capacity").isNotNull()
+        )
+    )
+    df_slots_null_values = df_clean.filter(F.col("slots_free").isNull())
+    df_bikes_available_values = df_clean.filter(F.col("bikes_available").isNull())
+    df_capacity_values = df_clean.filter(F.col("capacity").isNull())
 
     # =====RAPPORT QUALITE=====
 

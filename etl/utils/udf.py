@@ -456,7 +456,9 @@ def clean_nb_bikes(
     try:
         # Vérification des valeurs nulles ou non numériques pour places_libres et capacity
         places_libres_int = (
-            int(places_libres)
+            places_libres
+            if isinstance(places_libres, int)
+            else int(places_libres)
             if isinstance(places_libres, str) and places_libres.isnumeric()
             else None
         )
