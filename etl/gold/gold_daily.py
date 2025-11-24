@@ -155,7 +155,7 @@ if __name__ == "__main__":
         .agg(F.round(F.avg("bikes_available"), 2).alias("avg_bikes_available"))
         .orderBy("availability_date_partition", "station_id")
     )
-    # fact_avg_velo_dispo_per_day_and_station.show()
+    # fact_avg_velo_dispo_per_day_and_station.printSchema()
 
     # TAUX OCCUPATION
     # ---------------
@@ -169,16 +169,10 @@ if __name__ == "__main__":
             2,
         ),
     )
-    # fact_taux_occupation.show()
+    # fact_taux_occupation.printSchema()
 
     # METEO DOMINANTE PAR JOUR
     # ------------------------
-    # fact_meteo_dominate = (
-    #     df_weather_silver.groupBy("weather_date_partition", "weather_condition")
-    #     .count()
-    #     .orderBy("weather_date_partition", F.desc("count"), "weather_condition")
-    # )
-    # fact_meteo_dominate.show()
 
     weather_counts = df_weather_silver.groupBy(
         "weather_date_partition", "weather_condition"
@@ -188,13 +182,90 @@ if __name__ == "__main__":
     w = Window.partitionBy("weather_date_partition").orderBy(F.desc("count"))
 
     # On garde uniquement la condition météo la plus fréquente du jour
-    fact_meteo_dominate = (
+    fact_meteo_dominante = (
         weather_counts.withColumn("rn", F.row_number().over(w))
         .filter(F.col("rn") == 1)
         .drop("rn")
     )
+    # fact_meteo_dominante.printSchema()
 
-    fact_meteo_dominate.show()
+    # TOP 5 STATIONS SATUREES
+    # -----------------------
+
+    # calcul du pourcentage de saturation par station et par jour
+    fact_station_saturee_per_day = (
+        df_join_availability_station.groupBy(
+            "availability_date_partition", "station_id"
+        )
+        .agg(
+            F.count("*").alias("count_releve_per_day"),
+            F.sum(
+                F.when(F.col("bikes_available") == F.col("capacity"), 1).otherwise(0)
+            ).alias("nbr_station_sature"),
+        )
+        .withColumn(
+            "station_saturee",
+            F.round(
+                F.col("nbr_station_sature") / F.col("count_releve_per_day") * 100, 2
+            ),
+        )
+        .orderBy("availability_date_partition", F.desc("station_saturee"))
+        .select("availability_date_partition", "station_id", "station_saturee")
+    )
+    # fact_station_saturee_per_day.show()
+
+    # On crée une fenêtre par jour, triée par station_saturee décroissant
+    w1 = Window.partitionBy("availability_date_partition").orderBy(
+        F.col("station_saturee").desc()
+    )
+
+    # On garde uniquement le top 5 des stations les plus saturées par jour
+    fact_top_5_station_saturee_per_day = (
+        fact_station_saturee_per_day.withColumn("rn", F.row_number().over(w1))
+        .filter(F.col("rn") <= 5)
+        .drop("rn")
+    )
+    # fact_top_5_station_saturee_per_day.printSchema()
+
+    # on agrège les 5 stations saturées par jour dans une liste
+    fact_top5_array = fact_top_5_station_saturee_per_day.groupBy(
+        "availability_date_partition"
+    ).agg(
+        F.collect_list(F.struct("station_id", "station_saturee")).alias(
+            "top_5_stations"
+        )
+    )
+    # fact_top5_array.printSchema()
+
+    # TABLE FINALE availability_daily_gold
+    # ------------------------------------
+
+    availability_daily_gold = (
+        fact_avg_velo_dispo_per_day_and_station.join(
+            fact_meteo_dominante,
+            fact_avg_velo_dispo_per_day_and_station["availability_date_partition"]
+            == fact_meteo_dominante["weather_date_partition"],
+            "inner",
+        )
+        .join(fact_taux_occupation, "availability_date_partition", "inner")
+        .join(
+            fact_top5_array, "availability_date_partition", "inner"
+        )
+    ).select(
+        "availability_date_partition",
+        "avg_bikes_available",
+        "taux_occupation",
+        "weather_condition",
+        "top_5_stations",
+    ).groupBy("availability_date_partition").agg(
+        F.round(F.avg("avg_bikes_available"), 2).alias("avg_bikes_available_day"),
+        F.round(F.avg("taux_occupation"), 2).alias("taux_occupation_day"),
+        F.first("weather_condition").alias("weather_condition_day"),
+        F.first("top_5_stations").alias("top_5_stations_day"),
+    )
+
+    availability_daily_gold.show()
+
 
 # df_gold.show()
 # df_weather_silver.show(5)
@@ -242,5 +313,32 @@ if __name__ == "__main__":
 #  |-- rain_mm: double (nullable = true)
 #  |-- weather_condition: string (nullable = true)
 #  |-- weather_date_partition: date (nullable = true)
+
+# tables faits:
+
+# root
+#  |-- availability_date_partition: date (nullable = true)
+#  |-- station_id: integer (nullable = true)
+#  |-- avg_bikes_available: double (nullable = true)
+
+# root
+#  |-- station_id: integer (nullable = true)
+#  |-- availability_timestamp: string (nullable = true)
+#  |-- bikes_available: integer (nullable = true)
+#  |-- slots_free: integer (nullable = true)
+#  |-- availability_date_partition: date (nullable = true)
+#  |-- taux_occupation: double (nullable = true)
+
+# root
+#  |-- weather_date_partition: date (nullable = true)
+#  |-- weather_condition: string (nullable = true)
+#  |-- count: long (nullable = false)
+
+# root
+#  |-- availability_date_partition: date (nullable = true)
+#  |-- top_5_stations: array (nullable = false)
+#  |    |-- element: struct (containsNull = false)
+#  |    |    |-- station_id: integer (nullable = true)
+#  |    |    |-- station_saturee: double (nullable = true)
 
 # spark-submit etl/gold/gold_daily.py
