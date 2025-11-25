@@ -502,6 +502,6 @@ if __name__ == "__main__":
 
     df_gold.show()
 
-    # spark-submit etl/gold/gold_daily.py
-
 # endregion
+
+# spark-submit etl/gold/gold_daily.py

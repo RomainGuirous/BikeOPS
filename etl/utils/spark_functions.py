@@ -65,6 +65,9 @@ def apply_transformations(
     Returns:
         DataFrame: Le DataFrame transformé.
     """
+    # obtenir la liste des colonnes initiales
+    cols = df.columns
+
     # Initialiser les colonnes accumulateurs avec False
     df = df.withColumn("lignes_corrigees", F.lit(False)).withColumn(
         "valeurs_invalides", F.lit(False)
@@ -91,21 +94,8 @@ def apply_transformations(
         # Remplace la colonne par le champ nettoyé
         df = df.withColumn(col_name, F.col(f"{col_name}.value"))
 
-        # # Afficher le schéma après chaque transformation pour vérifier le type de colonne
-        # print(f"Schéma après transformation de {col_name}:")
-        # df.printSchema()
-
-        # # Vérifier si la colonne est encore un struct après transformation
-        # if isinstance(df.schema[col_name].dataType, T.StructType):
-        #     print(
-        #         f"Attention : La colonne {col_name} est encore un struct après transformation !"
-        #     )
-        # else:
-        #     print(f"La colonne {col_name} a été correctement transformée.")
-
     # compte le nombre de colonnes contenant des valeurs null ou vides pour chaque ligne
     if score:
-        cols = [t["col"] for t in transformations]  # colonnes à inclure dans le score
         # pour chaque colonne, on crée une condition : 1 si null ou vide, sinon 0
         score_expr = sum(
             F.when(F.col(c)["value"].isNull() | (F.col(c)["value"] == ""), 1).otherwise(

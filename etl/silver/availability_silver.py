@@ -140,6 +140,6 @@ if __name__ == "__main__":
     # arrêt de la session Spark
     spark.stop()
 
-    # spark-submit etl/silver/availability_silver.py
-
 # endregion
+
+# spark-submit etl/silver/availability_silver.py

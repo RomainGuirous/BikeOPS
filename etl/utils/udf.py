@@ -19,7 +19,7 @@ def clean_date(
     date_string: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[str, bool, bool]:
     """
-    Nettoie et formate une date donnée sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et formater une date donnée sous forme de chaîne de caractères.
 
     Args:
         date_string (str): La date sous forme de chaîne de caractères.
@@ -110,7 +110,7 @@ def clean_temperature(
     temperature_string: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[float, bool, bool]:
     """
-    Nettoie et formate une température donnée sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et formater une température donnée sous forme de chaîne de caractères.
 
     Args:
         temperature_string (str): La température sous forme de chaîne de caractères.
@@ -164,7 +164,7 @@ def clean_rain_mm(
     rain_string: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[float, bool, bool]:
     """
-    Nettoie et formate une valeur de précipitations donnée sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et formater une valeur de précipitations donnée sous forme de chaîne de caractères.
 
     Args:
         rain_string (str): La valeur des précipitations sous forme de chaîne de caractères.
@@ -218,7 +218,7 @@ def clean_weather(
     weather_condition: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[str | None, bool, bool]:
     """
-    Nettoie et valide une condition météorologique donnée sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et valider une condition météorologique donnée sous forme de chaîne de caractères.
 
     Args:
         weather_condition (str): La condition météorologique sous forme de chaîne de caractères.
@@ -268,7 +268,7 @@ def clean_latitude(
     latitude: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[float | None, bool, bool]:
     """
-    Nettoie et valide une latitude donnée sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et valider une latitude donnée sous forme de chaîne de caractères.
 
     Args:
         latitude (str): La latitude sous forme de chaîne de caractères.
@@ -319,7 +319,7 @@ def clean_longitude(
     longitude: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[float | None, bool, bool]:
     """
-    Nettoie et valide une longitude donnée sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et valider une longitude donnée sous forme de chaîne de caractères.
 
     Args:
         longitude (str): La longitude sous forme de chaîne de caractères.
@@ -370,7 +370,7 @@ def clean_station_name(
     s: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[str | None, bool, bool]:
     """
-    Nettoie et valide un nom de station donné sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et valider un nom de station donné sous forme de chaîne de caractères.
 
     Args:
         s (str): Le nom de la station sous forme de chaîne de caractères.
@@ -422,7 +422,7 @@ def clean_positive_int(
     positive_int_string: str, ligne_corrigee: bool, ligne_invalide: bool
 ) -> tuple[int, bool, bool]:
     """
-    Nettoie et valide un entier positif donné sous forme de chaîne de caractères.
+    Fonction UDF pour nettoyer et valider un entier positif donné sous forme de chaîne de caractères.
 
     Args:
         positive_int_string (str): L'entier positif sous forme de chaîne de caractères.
@@ -478,7 +478,7 @@ def clean_nb_bikes(
     ligne_invalide: bool,
 ) -> tuple[int, bool, bool]:
     """
-    Nettoie et valide le nombre de vélos disponibles en fonction des données fournies.
+    Fonction UDF pour nettoyer et valider le nombre de vélos disponibles en fonction des données fournies.
 
     Args:
         velo_dispo_string (str): Le nombre de vélos disponibles sous forme de chaîne de caractères.
