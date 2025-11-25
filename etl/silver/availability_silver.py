@@ -1,3 +1,4 @@
+# region IMPORTS
 import os
 from pyspark.sql import SparkSession, DataFrame, functions as F
 
@@ -11,6 +12,9 @@ from etl.utils.spark_functions import (
     create_silver_df,
     quality_rapport,
 )
+# endregion
+
+# region FUNCTIONS
 
 
 def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]:
@@ -86,6 +90,9 @@ def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]
     return df_availability_clean, availability_rapport_value
 
 
+# endregion
+
+# region MAIN SCRIPT
 if __name__ == "__main__":
     # ======CREATION DATAFRAME======
 
@@ -134,3 +141,5 @@ if __name__ == "__main__":
     spark.stop()
 
     # spark-submit etl/silver/availability_silver.py
+
+# endregion

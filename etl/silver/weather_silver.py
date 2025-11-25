@@ -1,3 +1,4 @@
+# region IMPORTS
 import os
 from pyspark.sql import SparkSession, DataFrame
 from etl.utils.spark_functions import (
@@ -11,6 +12,9 @@ from etl.utils.udf import (
     clean_rain_mm,
     clean_weather,
 )
+# endregion
+
+# region FUNCTIONS
 
 
 def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
@@ -63,6 +67,12 @@ def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
     return df_weather_clean, weather_rapport_value
 
 
+# endregion
+
+
+# region MAIN SCRIPT
+
+
 if __name__ == "__main__":
     # ======CREATION DATAFRAME======
 
@@ -94,3 +104,5 @@ if __name__ == "__main__":
     spark.stop()
 
     # spark-submit etl/silver/weather_silver.py
+
+# endregion

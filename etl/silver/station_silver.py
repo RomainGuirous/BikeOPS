@@ -1,3 +1,4 @@
+# region IMPORTS
 import os
 from pyspark.sql import SparkSession, DataFrame
 from etl.utils.spark_functions import read_csv_spark, create_silver_df, quality_rapport
@@ -7,6 +8,9 @@ from etl.utils.udf import (
     clean_longitude,
     clean_station_name,
 )
+# endregion
+
+# region FUNCTIONS
 
 
 def create_silver_station_df(spark: SparkSession) -> tuple[DataFrame, dict]:
@@ -58,6 +62,12 @@ def create_silver_station_df(spark: SparkSession) -> tuple[DataFrame, dict]:
     return df_station_clean, station_rapport_value
 
 
+# endregion
+
+
+# region MAIN SCRIPT
+
+
 if __name__ == "__main__":
     # ======CREATION DATAFRAME======
 
@@ -91,3 +101,4 @@ if __name__ == "__main__":
     spark.stop()
 
     # spark-submit etl/silver/station_silver.py
+# endregion

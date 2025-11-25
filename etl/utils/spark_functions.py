@@ -1,9 +1,11 @@
+# region IMPORTS
 from pyspark.sql import SparkSession, DataFrame, functions as F
 from pyspark.sql.window import Window
 import os
-import pyspark.sql.types as T
+# endregion
 
 
+# region READ CSV
 def read_csv_spark(
     spark: SparkSession, path: str, col: list = None, *, delimiter: str = ";"
 ) -> DataFrame:
@@ -36,6 +38,10 @@ def read_csv_spark(
     return df
 
 
+# endregion
+
+
+# region APPLY TRANSFORMATIONS
 def apply_transformations(
     df,
     transformations: list[dict[str, any]],
@@ -119,6 +125,11 @@ def apply_transformations(
     return df
 
 
+# endregion
+
+# region REPORT CLEANUP
+
+
 def process_report_and_cleanup(df: DataFrame) -> dict[str, int]:
     """
     Compte les colonnes `lignes_corrigees`, `valeurs_invalides`, et `lignes_supprimees`,
@@ -152,6 +163,11 @@ def process_report_and_cleanup(df: DataFrame) -> dict[str, int]:
     return df, rapport
 
 
+# endregion
+
+# region DROP DUPLICATES
+
+
 def drop_duplicates(
     df: DataFrame, partition_cols: list[str], order_col: str
 ) -> DataFrame:
@@ -178,6 +194,11 @@ def drop_duplicates(
     df = df.filter(F.col("row_number") == 1).drop("row_number")
 
     return df
+
+
+# endregion
+
+# region CREATE SILVER DF
 
 
 def create_silver_df(
@@ -248,6 +269,11 @@ def create_silver_df(
     return df_clean, rapport_value
 
 
+# endregion
+
+# region QUALITY REPORT
+
+
 def quality_rapport(rapport_value: dict[str, int], rapport_file_name: str) -> None:
     """
     Génère un rapport de qualité des données et l'écrit dans un fichier texte.
@@ -278,3 +304,6 @@ def quality_rapport(rapport_value: dict[str, int], rapport_file_name: str) -> No
         f"/app/data/data_clean/rapport_qualite/{rapport_file_name}_rapport.txt", "w"
     ) as f:
         f.write("\n".join(rapport))
+
+
+# endregion

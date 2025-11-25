@@ -1,7 +1,10 @@
+# region IMPORTS
 from pyspark.sql import functions as F, types as T
 import re
+# endregion
 
 
+# region CLEAN DATE
 # pour des fonctions UDF qui retournent plusieurs valeurs (multi-colonnes)
 @F.udf(
     T.StructType(
@@ -64,7 +67,9 @@ def clean_date(
             )
             ligne_corrigee = True
         else:
-            reformatted_date = date_part  # Garder la date telle quelle si non modifiable
+            reformatted_date = (
+                date_part  # Garder la date telle quelle si non modifiable
+            )
 
         # etape 4 : formater l'heure si besoin
         if len(hour_part.strip()) == 0:
@@ -85,6 +90,11 @@ def clean_date(
     except (ValueError, TypeError):
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
+
+
+# endregion
+
+# region CLEAN TEMPERATURE
 
 
 @F.udf(
@@ -136,6 +146,11 @@ def clean_temperature(
         return None, ligne_corrigee, ligne_invalide
 
 
+# endregion
+
+# region CLEAN RAIN MM
+
+
 @F.udf(
     T.StructType(
         [
@@ -185,6 +200,11 @@ def clean_rain_mm(
         return None, ligne_corrigee, ligne_invalide
 
 
+# endregion
+
+# region CLEAN WEATHER
+
+
 @F.udf(
     T.StructType(
         [
@@ -228,6 +248,11 @@ def clean_weather(
     except (ValueError, TypeError):
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
+
+
+# endregion
+
+# region CLEAN LATITUDE
 
 
 @F.udf(
@@ -276,6 +301,11 @@ def clean_latitude(
         return None, ligne_corrigee, ligne_invalide
 
 
+# endregion
+
+# region CLEAN LONGITUDE
+
+
 @F.udf(
     T.StructType(
         [
@@ -320,6 +350,11 @@ def clean_longitude(
     except (ValueError, TypeError):
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
+
+
+# endregion
+
+# region CLEAN STATION NAME
 
 
 @F.udf(
@@ -369,6 +404,11 @@ def clean_station_name(
         return None, ligne_corrigee, ligne_invalide
 
 
+# endregion
+
+# region CLEAN POSITIVE INT
+
+
 @F.udf(
     T.StructType(
         [
@@ -414,6 +454,11 @@ def clean_positive_int(
     except (ValueError, TypeError):
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
+
+
+# endregion
+
+# region CLEAN NB BIKES
 
 
 @F.udf(
@@ -497,3 +542,6 @@ def clean_nb_bikes(
     except (ValueError, TypeError):
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
+
+
+# endregion
