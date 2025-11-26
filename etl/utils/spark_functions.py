@@ -158,7 +158,7 @@ def process_report_and_cleanup(df: DataFrame) -> dict[str, int]:
 # region DROP DUPLICATES
 
 
-def drop_duplicates(
+def dedupe_by_partition_order(
     df: DataFrame, partition_cols: list[str], order_col: str
 ) -> DataFrame:
     """
@@ -241,7 +241,7 @@ def create_silver_df(
 
     # suppression des doublons si demandé
     if duplicates_drop:
-        df_clean = drop_duplicates(
+        df_clean = dedupe_by_partition_order(
             df_clean, partition_cols=["station_id", "timestamp"], order_col="score"
         )
 

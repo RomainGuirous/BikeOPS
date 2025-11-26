@@ -152,6 +152,36 @@ def expected_df_after_cleanup_fixture(spark_session):
 
 # endregion
 
+# region DF ENTREE(DEDUPLICATION)
+
+@pytest.fixture
+def input_df_fixture_for_dedupe(spark_session):
+    """
+    DataFrame d'entrée avec doublons pour tester la déduplication,
+    compatible avec la fixture de sortie expected_df_fixture_with_score.
+    """
+    data = [
+        (1, "orange", True, False, 2),
+        (1, "orange", True, False, 0),  # Meilleur score, doit être gardée
+        (2, "banana", False, False, 0),
+        (3, None, False, True, 3),
+        (3, None, False, True, 1),      # Meilleur score, doit être gardée
+        (4, "", True, True, 2),
+        (4, "", True, True, 1),         # Meilleur score, doit être gardée
+    ]
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType(), nullable=True),
+            T.StructField("fruit", T.StringType(), nullable=True),
+            T.StructField("lignes_corrigees", T.BooleanType(), nullable=True),
+            T.StructField("valeurs_invalides", T.BooleanType(), nullable=True),
+            T.StructField("score", T.IntegerType(), nullable=False),
+        ]
+    )
+    return spark_session.createDataFrame(data, schema)
+
+# endregion
+
 # region LIST TRANSFORMATIONS
 
 
