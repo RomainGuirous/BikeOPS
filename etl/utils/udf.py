@@ -61,15 +61,19 @@ def clean_date(
 
         # etape 3 : reformater la date
         reformatted_date = None  # Initialiser la variable pour éviter l'erreur
-        if re.match(r"^\d{2}-\d{2}-\d{4}$", date_part):
-            reformatted_date = re.sub(
-                r"^(\d{2})-(\d{2})-(\d{4}$)", r"\3-\2-\1", date_part
-            )
-            ligne_corrigee = True
+        if re.match(r"^\d{2}-\d{2}-\d{4}$", date_part) or re.match(r"^\d{4}-\d{2}-\d{2}$", date_part):
+            if re.match(r"^\d{2}-\d{2}-\d{4}$", date_part):
+                reformatted_date = re.sub(
+                    r"^(\d{2})-(\d{2})-(\d{4}$)", r"\3-\2-\1", date_part
+                )
+                ligne_corrigee = True
+            else:
+                reformatted_date = (
+                    date_part  # Garder la date telle quelle si non modifiable
+                )
         else:
-            reformatted_date = (
-                date_part  # Garder la date telle quelle si non modifiable
-            )
+            ligne_invalide = True
+            return None, ligne_corrigee, ligne_invalide
 
         # etape 4 : formater l'heure si besoin
         if len(hour_part.strip()) == 0:

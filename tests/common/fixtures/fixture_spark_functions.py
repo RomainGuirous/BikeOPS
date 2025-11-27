@@ -1,28 +1,9 @@
 # region IMPORTS
 import pytest
-from pyspark.sql import SparkSession
 from pyspark.sql import functions as F, types as T
-from datetime import date, datetime
+from datetime import date
 # endregion
 
-
-# region SPARK SESSION FIXTURE
-
-
-# scope='session': la fixture est créée une seule fois pour tous les tests de la session
-# autouse=True: la fixture est automatiquement utilisée par tous les tests sans avoir besoin de la mentionner explicitement
-# session + True: une seule session Spark est créée sans être appelée explicitement
-@pytest.fixture(scope="session", autouse=True)
-def spark_session():
-    """
-    Fixture pour créer une session Spark utilisée dans les tests.
-    """
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
-    yield spark
-    spark.stop()
-
-
-# endregion
 
 # region DF ENTREE
 
@@ -260,7 +241,7 @@ def expected_silver_df_with_partition_fixture(spark_session):
     #     (4, "", datetime(2025, 11, 1, 10, 3, 0), date(2025, 11, 1)),
     #     (5, "orange", datetime(2025, 11, 1, 10, 3, 0), date(2025, 11, 1)),
     # ]
-    data =[
+    data = [
         (1, "orange", "2025-11-01 10:00:00", date(2025, 11, 1)),
         (2, "banana", "2025-11-01 10:01:00", date(2025, 11, 1)),
         (3, None, "2025-11-01 10:02:00", date(2025, 11, 1)),

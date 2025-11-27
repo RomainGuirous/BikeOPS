@@ -218,7 +218,8 @@ def test_create_silver_df_df(
     request: pytest.FixtureRequest,
 ):
     """
-    Teste que le rapport retourné par create_silver_df correspond au rapport attendu.
+    Teste que le DataFrame retourné par create_silver_df correspond au DataFrame attendu
+    pour différents paramètres de score, déduplication, partition et drop.
     """
     expected_df_fixture = request.getfixturevalue(expected_df_name)
     result_df, _ = create_silver_df(
@@ -238,3 +239,5 @@ def test_create_silver_df_df(
 
 
 # endregion
+
+# pytest tests/test_utils/test_spark_functions.py
