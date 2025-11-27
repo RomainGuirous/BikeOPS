@@ -82,7 +82,7 @@ def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]
         df,
         transformations,
         score=True,
-        duplicates_drop=True,
+        duplicates_drop=["station_id", "timestamp"],
         partition_col="timestamp",
         drop_cols=["capacity", "score"],
     )

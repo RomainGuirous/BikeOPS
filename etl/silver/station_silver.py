@@ -56,7 +56,7 @@ def create_silver_station_df(spark: SparkSession) -> tuple[DataFrame, dict]:
     ]
 
     df_station_clean, station_rapport_value = create_silver_df(
-        df, transformations, score=False, duplicates_drop=False, partition_col=None
+        df, transformations, score=False, duplicates_drop=None, partition_col=None
     )
 
     return df_station_clean, station_rapport_value

@@ -60,7 +60,7 @@ def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
         df,
         transformations,
         score=False,
-        duplicates_drop=False,
+        duplicates_drop=None,
         partition_col="timestamp",
     )
 

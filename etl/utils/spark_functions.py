@@ -1,7 +1,7 @@
 # region IMPORTS
 from pyspark.sql import SparkSession, DataFrame, functions as F
 from pyspark.sql.window import Window
-import os
+from pathlib import Path
 # endregion
 
 
@@ -196,7 +196,7 @@ def create_silver_df(
     transformations: list[dict],
     *,
     score: bool = False,
-    duplicates_drop: bool = False,
+    duplicates_drop: list = None,
     partition_col: str = None,
     drop_cols: list[str] = None,
 ) -> tuple[DataFrame, dict]:
@@ -240,9 +240,9 @@ def create_silver_df(
     df_clean, rapport_value = process_report_and_cleanup(df_clean)
 
     # suppression des doublons si demandé
-    if duplicates_drop:
+    if duplicates_drop and score:
         df_clean = dedupe_by_partition_order(
-            df_clean, partition_cols=["station_id", "timestamp"], order_col="score"
+            df_clean, partition_cols=[*duplicates_drop], order_col="score"
         )
 
     # suppression des lignes où toutes les valeurs sont nulles
@@ -264,19 +264,22 @@ def create_silver_df(
 # region QUALITY REPORT
 
 
-def quality_rapport(rapport_value: dict[str, int], rapport_file_name: str) -> None:
+def quality_rapport(
+    rapport_value: dict[str, int],
+    rapport_file_name: str,
+    base_path: str | Path = "/app/data/data_clean/rapport_qualite",
+) -> None:
     """
     Génère un rapport de qualité des données et l'écrit dans un fichier texte.
 
     Args:
         rapport_value (dict): Dictionnaire contenant les statistiques de qualité des données.
         rapport_file_name (str): Nom du fichier dans lequel écrire le rapport.
+        base_path (str | Path, optional): Chemin de base pour enregistrer le rapport. Par défaut "/app/data/data_clean/rapport_qualite".
 
     Returns:
-        None (écrit le rapport dans un fichier texte (/data/data_clean/rapport_qualite/)).
+        None (écrit le rapport dans un fichier texte dans le répertoire spécifié).
     """
-
-    # =====RAPPORT QUALITE=====
     rapport = [
         f"Rapport qualité - {rapport_file_name}",
         "-------------------------------------",
@@ -286,13 +289,14 @@ def quality_rapport(rapport_value: dict[str, int], rapport_file_name: str) -> No
         f"- Lignes supprimées : {rapport_value['total_lignes_supprimees']}",
     ]
 
-    # Création du répertoire rapport_qualite s'il n'existe pas
-    os.makedirs("/app/data/data_clean/rapport_qualite", exist_ok=True)
+    # Convertir en Path si ce n'est pas déjà le cas
+    base_path = Path(base_path)
+
+    # Création du répertoire
+    base_path.mkdir(parents=True, exist_ok=True)
 
     # Écriture du rapport qualité dans un fichier texte
-    with open(
-        f"/app/data/data_clean/rapport_qualite/{rapport_file_name}_rapport.txt", "w"
-    ) as f:
+    with open(base_path / f"{rapport_file_name}_rapport.txt", "w") as f:
         f.write("\n".join(rapport))
 
 
