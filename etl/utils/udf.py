@@ -15,9 +15,7 @@ import re
         ]
     )
 )
-def clean_date(
-    date_string: str, ligne_corrigee: bool, ligne_invalide: bool
-) -> tuple[str, bool, bool]:
+def clean_date(date_string: str) -> tuple[str, bool, bool]:
     """
     Fonction UDF pour nettoyer et formater une date donnée sous forme de chaîne de caractères.
 
@@ -37,6 +35,9 @@ def clean_date(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+
     if not date_string:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
@@ -61,7 +62,9 @@ def clean_date(
 
         # etape 3 : reformater la date
         reformatted_date = None  # Initialiser la variable pour éviter l'erreur
-        if re.match(r"^\d{2}-\d{2}-\d{4}$", date_part) or re.match(r"^\d{4}-\d{2}-\d{2}$", date_part):
+        if re.match(r"^\d{2}-\d{2}-\d{4}$", date_part) or re.match(
+            r"^\d{4}-\d{2}-\d{2}$", date_part
+        ):
             if re.match(r"^\d{2}-\d{2}-\d{4}$", date_part):
                 reformatted_date = re.sub(
                     r"^(\d{2})-(\d{2})-(\d{4}$)", r"\3-\2-\1", date_part
@@ -110,9 +113,7 @@ def clean_date(
         ]
     )
 )
-def clean_temperature(
-    temperature_string: str, ligne_corrigee: bool, ligne_invalide: bool
-) -> tuple[float, bool, bool]:
+def clean_temperature(temperature_string: str) -> tuple[float, bool, bool]:
     """
     Fonction UDF pour nettoyer et formater une température donnée sous forme de chaîne de caractères.
 
@@ -132,6 +133,9 @@ def clean_temperature(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+
     if not temperature_string:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
@@ -165,7 +169,7 @@ def clean_temperature(
     )
 )
 def clean_rain_mm(
-    rain_string: str, ligne_corrigee: bool, ligne_invalide: bool
+    rain_string: str
 ) -> tuple[float, bool, bool]:
     """
     Fonction UDF pour nettoyer et formater une valeur de précipitations donnée sous forme de chaîne de caractères.
@@ -186,6 +190,9 @@ def clean_rain_mm(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+
     if not rain_string:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
@@ -219,7 +226,7 @@ def clean_rain_mm(
     )
 )
 def clean_weather(
-    weather_condition: str, ligne_corrigee: bool, ligne_invalide: bool
+    weather_condition: str
 ) -> tuple[str | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider une condition météorologique donnée sous forme de chaîne de caractères.
@@ -240,8 +247,11 @@ def clean_weather(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+
     liste_conditions_valides = ["Rain", "Cloudy", "Clear", "Drizzle", "Fog"]
-    
+
     if not weather_condition:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
@@ -271,7 +281,7 @@ def clean_weather(
     )
 )
 def clean_latitude(
-    latitude: str, ligne_corrigee: bool, ligne_invalide: bool
+    latitude: str
 ) -> tuple[float | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider une latitude donnée sous forme de chaîne de caractères.
@@ -292,6 +302,9 @@ def clean_latitude(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+
     if not latitude:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
@@ -322,7 +335,7 @@ def clean_latitude(
     )
 )
 def clean_longitude(
-    longitude: str, ligne_corrigee: bool, ligne_invalide: bool
+    longitude: str
 ) -> tuple[float | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider une longitude donnée sous forme de chaîne de caractères.
@@ -343,6 +356,9 @@ def clean_longitude(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+
     if not longitude:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
@@ -373,7 +389,7 @@ def clean_longitude(
     )
 )
 def clean_station_name(
-    s: str, ligne_corrigee: bool, ligne_invalide: bool
+    station_name: str
 ) -> tuple[str | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider un nom de station donné sous forme de chaîne de caractères.
@@ -394,13 +410,16 @@ def clean_station_name(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
-    if not s:
+    ligne_corrigee = False
+    ligne_invalide = False
+
+    if not station_name:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
     try:
         pattern = r"^Lille - Station \d{2}$"
-        if re.fullmatch(pattern, s):
-            return s, ligne_corrigee, ligne_invalide
+        if re.fullmatch(pattern, station_name):
+            return station_name, ligne_corrigee, ligne_invalide
         else:
             ligne_invalide = True
             return None, ligne_corrigee, ligne_invalide
@@ -425,7 +444,7 @@ def clean_station_name(
     )
 )
 def clean_positive_int(
-    positive_int_string: str, ligne_corrigee: bool, ligne_invalide: bool
+    positive_int_string: str
 ) -> tuple[int, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider un entier positif donné sous forme de chaîne de caractères.
@@ -446,6 +465,9 @@ def clean_positive_int(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+
     if not positive_int_string:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
@@ -480,8 +502,6 @@ def clean_nb_bikes(
     velo_dispo_string: str,
     places_libres: str,
     capacity: str,
-    ligne_corrigee: bool,
-    ligne_invalide: bool,
 ) -> tuple[int, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider le nombre de vélos disponibles en fonction des données fournies.
@@ -504,6 +524,9 @@ def clean_nb_bikes(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    ligne_corrigee = False
+    ligne_invalide = False
+    
     try:
         # Vérification des valeurs nulles ou non numériques pour places_libres et capacity
         places_libres_int = (
