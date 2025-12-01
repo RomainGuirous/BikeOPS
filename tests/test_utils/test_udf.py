@@ -7,7 +7,10 @@ from etl.utils.udf import (
     clean_rain_mm,
     clean_weather,
     clean_latitude,
-    clean_longitude
+    clean_longitude,
+    clean_station_name,
+    clean_positive_int,
+    clean_nb_bikes,
 )
 # endregion
 
@@ -24,7 +27,7 @@ def test_clean_date(
     df_result = clean_date_input_fixture.withColumn(
         "cleaned",
         clean_date(
-            F.col("date_string"),
+            "date_string",
             "ligne_corrigee",
             "ligne_invalide",
         ),
@@ -47,15 +50,15 @@ def test_clean_date(
 
 
 def test_clean_temperature(
-    df_temperature_input: pytest.fixture, expected_temperature_output: pytest.fixture
+    df_temperature_input_fixture: pytest.fixture, expected_temperature_output_fixture: pytest.fixture
 ):
     """
     Teste que la fonction clean_temperature nettoie correctement les températures.
     """
-    df_result = df_temperature_input.withColumn(
+    df_result = df_temperature_input_fixture.withColumn(
         "cleaned",
         clean_temperature(
-            F.col("temperature_string"),
+            "temperature_string",
             "ligne_corrigee",
             "ligne_invalide",
         ),
@@ -68,7 +71,7 @@ def test_clean_temperature(
         F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
         F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
     )
-    expected_sorted = expected_temperature_output.orderBy("id").select(
+    expected_sorted = expected_temperature_output_fixture.orderBy("id").select(
         F.col("temperature_string"),
         F.col("ligne_corrigee"),
         F.col("ligne_invalide"),
@@ -84,15 +87,15 @@ def test_clean_temperature(
 
 
 def test_clean_rain_mm(
-    df_rain_input: pytest.fixture, expected_rain_output: pytest.fixture
+    df_rain_input_fixture: pytest.fixture, expected_rain_output_fixture: pytest.fixture
 ):
     """
     Teste que la fonction clean_rain_mm nettoie correctement les précipitations en mm.
     """
-    df_result = df_rain_input.withColumn(
+    df_result = df_rain_input_fixture.withColumn(
         "cleaned",
         clean_rain_mm(
-            F.col("rain_string"),
+            "rain_string",
             "ligne_corrigee",
             "ligne_invalide",
         ),
@@ -103,7 +106,7 @@ def test_clean_rain_mm(
         F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
         F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
     )
-    expected_sorted = expected_rain_output.orderBy("id").select(
+    expected_sorted = expected_rain_output_fixture.orderBy("id").select(
         F.col("rain_string"),
         F.col("ligne_corrigee"),
         F.col("ligne_invalide"),
@@ -119,15 +122,15 @@ def test_clean_rain_mm(
 
 
 def test_clean_weather(
-    df_weather_input: pytest.fixture, expected_weather_output: pytest.fixture
+    df_weather_input_fixture: pytest.fixture, expected_weather_output_fixture: pytest.fixture
 ):
     """
     Teste que les fonctions de nettoyage des données météo fonctionnent correctement ensemble.
     """
-    df_result = df_weather_input.withColumn(
+    df_result = df_weather_input_fixture.withColumn(
         "cleaned",
         clean_weather(
-            F.col("weather_condition"),
+            "weather_condition",
             "ligne_corrigee",
             "ligne_invalide",
         ),
@@ -140,7 +143,7 @@ def test_clean_weather(
         F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
         F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
     )
-    expected_sorted = expected_weather_output.orderBy("id").select(
+    expected_sorted = expected_weather_output_fixture.orderBy("id").select(
         F.col("weather_condition"),
         F.col("ligne_corrigee"),
         F.col("ligne_invalide"),
@@ -156,15 +159,15 @@ def test_clean_weather(
 
 
 def test_clean_latitude(
-    df_latitude_input: pytest.fixture, expected_latitude_output: pytest.fixture
+    df_latitude_input_fixture: pytest.fixture, expected_latitude_output_fixture: pytest.fixture
 ):
     """
     Teste que la fonction clean_latitude nettoie correctement les latitudes.
     """
-    df_result = df_latitude_input.withColumn(
+    df_result = df_latitude_input_fixture.withColumn(
         "cleaned",
         clean_latitude(
-            F.col("latitude"),
+            "latitude",
             "ligne_corrigee",
             "ligne_invalide",
         ),
@@ -175,7 +178,7 @@ def test_clean_latitude(
         F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
         F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
     )
-    expected_sorted = expected_latitude_output.orderBy("id").select(
+    expected_sorted = expected_latitude_output_fixture.orderBy("id").select(
         F.col("latitude"),
         F.col("ligne_corrigee"),
         F.col("ligne_invalide"),
@@ -191,15 +194,15 @@ def test_clean_latitude(
 
 
 def test_clean_longitude(
-    df_longitude_input: pytest.fixture, expected_longitude_output: pytest.fixture
+    df_longitude_input_fixture: pytest.fixture, expected_longitude_output_fixture: pytest.fixture
 ):
     """
     Teste que la fonction clean_longitude nettoie correctement les longitudes.
     """
-    df_result = df_longitude_input.withColumn(
+    df_result = df_longitude_input_fixture.withColumn(
         "cleaned",
         clean_longitude(
-            F.col("longitude"),
+            "longitude",
             "ligne_corrigee",
             "ligne_invalide",
         ),
@@ -210,7 +213,7 @@ def test_clean_longitude(
         F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
         F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
     )
-    expected_sorted = expected_longitude_output.orderBy("id").select(
+    expected_sorted = expected_longitude_output_fixture.orderBy("id").select(
         F.col("longitude"),
         F.col("ligne_corrigee"),
         F.col("ligne_invalide"),
@@ -221,4 +224,111 @@ def test_clean_longitude(
 
 
 # endregion
+
+# region CLEAN STATION NAME
+
+
+def test_clean_station_name(
+    df_station_name_input_fixture: pytest.fixture, df_station_name_expected_fixture: pytest.fixture
+):
+    """
+    Teste que la fonction clean_station_name nettoie correctement les noms de stations.
+    """
+    df_result = df_station_name_input_fixture.withColumn(
+        "cleaned",
+        clean_station_name(
+            "station_name",
+            "ligne_corrigee",
+            "ligne_invalide",
+        ),
+    )
+
+    result_sorted = df_result.orderBy("id").select(
+        F.col("cleaned.value").alias("station_name"),
+        F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
+        F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
+    )
+    expected_sorted = df_station_name_expected_fixture.orderBy("id").select(
+        F.col("station_name"),
+        F.col("ligne_corrigee"),
+        F.col("ligne_invalide"),
+    )
+
+    assert result_sorted.schema == expected_sorted.schema
+    assert result_sorted.collect() == expected_sorted.collect()
+
+
+# endregion
+
+# region CLEAN POSITIVE INT
+
+
+def test_clean_positive_int(
+    df_positive_int_input_fixture: pytest.fixture, expected_positive_int_output_fixture: pytest.fixture
+):
+    """
+    Teste que la fonction clean_positive_int nettoie correctement les entiers positifs.
+    """
+    df_result = df_positive_int_input_fixture.withColumn(
+        "cleaned",
+        clean_positive_int(
+            "positive_int",
+            "ligne_corrigee",
+            "ligne_invalide",
+        ),
+    )
+
+    result_sorted = df_result.orderBy("id").select(
+        F.col("cleaned.value").alias("positive_int"),
+        F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
+        F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
+    )
+    expected_sorted = expected_positive_int_output_fixture.orderBy("id").select(
+        F.col("positive_int"),
+        F.col("ligne_corrigee"),
+        F.col("ligne_invalide"),
+    )
+
+    assert result_sorted.schema == expected_sorted.schema
+    assert result_sorted.collect() == expected_sorted.collect()
+
+
+# endregion
+
+# region CLEAN NB BIKES
+
+
+def test_clean_nb_bikes(
+    df_nb_bikes_input_fixture: pytest.fixture, expected_nb_bikes_output_fixture: pytest.fixture
+):
+    """
+    Teste que la fonction clean_nb_bikes nettoie correctement le nombre de vélos.
+    """
+    df_result = df_nb_bikes_input_fixture.withColumn(
+        "cleaned",
+        clean_nb_bikes(
+            "nb_bikes",
+            "places_libres",
+            "capacity",
+            "ligne_corrigee",
+            "ligne_invalide",
+        ),
+    )
+
+    result_sorted = df_result.orderBy("id").select(
+        F.col("cleaned.value").alias("nb_bikes"),
+        F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
+        F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
+    )
+    expected_sorted = expected_nb_bikes_output_fixture.orderBy("id").select(
+        F.col("nb_bikes"),
+        F.col("ligne_corrigee"),
+        F.col("ligne_invalide"),
+    )
+
+    assert result_sorted.schema == expected_sorted.schema
+    assert result_sorted.collect() == expected_sorted.collect()
+
+# endregion
+
 # pytest tests/test_utils/test_udf.py

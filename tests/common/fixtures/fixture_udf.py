@@ -76,7 +76,7 @@ def clean_date_expected_fixture(spark_session):
 
 
 @pytest.fixture
-def df_temperature_input(spark_session):
+def df_temperature_input_fixture(spark_session):
     schema = T.StructType(
         [
             T.StructField("id", T.IntegerType()),
@@ -105,7 +105,7 @@ def df_temperature_input(spark_session):
 
 
 @pytest.fixture
-def expected_temperature_output(spark_session):
+def expected_temperature_output_fixture(spark_session):
     schema = T.StructType(
         [
             T.StructField("id", T.IntegerType()),
@@ -141,7 +141,7 @@ def expected_temperature_output(spark_session):
 
 
 @pytest.fixture
-def df_rain_input(spark_session):
+def df_rain_input_fixture(spark_session):
     data = [
         (1, "12.5", False, False),  # Valide
         (2, "3,7", False, False),  # Virgule -> corrigée
@@ -171,7 +171,7 @@ def df_rain_input(spark_session):
 
 
 @pytest.fixture
-def expected_rain_output(spark_session):
+def expected_rain_output_fixture(spark_session):
     data = [
         (1, 12.5, False, False),  # "12.5"
         (2, 3.7, True, False),  # "3,7" -> corrigé
@@ -201,7 +201,7 @@ def expected_rain_output(spark_session):
 
 
 @pytest.fixture
-def df_weather_input(spark_session):
+def df_weather_input_fixture(spark_session):
     data = [
         (1, "Rain", False, False),  # valide
         (2, "Cloudy", False, False),  # valide
@@ -232,7 +232,7 @@ def df_weather_input(spark_session):
 
 
 @pytest.fixture
-def expected_weather_output(spark_session):
+def expected_weather_output_fixture(spark_session):
     data = [
         (1, "Rain", False, False),
         (2, "Cloudy", False, False),
@@ -263,7 +263,7 @@ def expected_weather_output(spark_session):
 
 
 @pytest.fixture
-def df_latitude_input(spark_session):
+def df_latitude_input_fixture(spark_session):
     data = [
         (1, "45.0", False, False),  # valide
         (2, "-90", False, False),  # limite valide
@@ -293,16 +293,16 @@ def df_latitude_input(spark_session):
 
 
 @pytest.fixture
-def expected_latitude_output(spark_session):
+def expected_latitude_output_fixture(spark_session):
     data = [
         (1, 45.0, False, False),
         (2, -90.0, False, False),
         (3, 90.0, False, False),
-        (4, None, False, True),      # invalide
-        (5, None, False, True),      # invalide
-        (6, None, False, True),      # invalide
-        (7, None, False, True),      # invalide
-        (8, None, False, True),      # invalide
+        (4, None, False, True),  # invalide
+        (5, None, False, True),  # invalide
+        (6, None, False, True),  # invalide
+        (7, None, False, True),  # invalide
+        (8, None, False, True),  # invalide
     ]
 
     schema = T.StructType(
@@ -323,16 +323,16 @@ def expected_latitude_output(spark_session):
 
 
 @pytest.fixture
-def df_longitude_input(spark_session):
+def df_longitude_input_fixture(spark_session):
     data = [
-        (1, "45.0", False, False),       # valide
-        (2, "-180", False, False),       # limite valide
-        (3, "180", False, False),        # limite valide
-        (4, "181", False, False),        # invalide (>180)
-        (5, "-181", False, False),       # invalide (<-180)
-        (6, "", False, False),           # vide -> invalide
-        (7, None, False, False),         # None -> invalide
-        (8, "abc", False, False),        # non convertible -> invalide
+        (1, "45.0", False, False),  # valide
+        (2, "-180", False, False),  # limite valide
+        (3, "180", False, False),  # limite valide
+        (4, "181", False, False),  # invalide (>180)
+        (5, "-181", False, False),  # invalide (<-180)
+        (6, "", False, False),  # vide -> invalide
+        (7, None, False, False),  # None -> invalide
+        (8, "abc", False, False),  # non convertible -> invalide
     ]
 
     schema = T.StructType(
@@ -353,16 +353,16 @@ def df_longitude_input(spark_session):
 
 
 @pytest.fixture
-def expected_longitude_output(spark_session):
+def expected_longitude_output_fixture(spark_session):
     data = [
         (1, 45.0, False, False),
         (2, -180.0, False, False),
         (3, 180.0, False, False),
-        (4, None, False, True),      # invalide
-        (5, None, False, True),      # invalide
-        (6, None, False, True),      # invalide
-        (7, None, False, True),      # invalide
-        (8, None, False, True),      # invalide
+        (4, None, False, True),  # invalide
+        (5, None, False, True),  # invalide
+        (6, None, False, True),  # invalide
+        (7, None, False, True),  # invalide
+        (8, None, False, True),  # invalide
     ]
 
     schema = T.StructType(
@@ -378,3 +378,157 @@ def expected_longitude_output(spark_session):
 
 
 # endregion
+
+# region DF ENTREE CLEAN STATION NAME
+
+
+@pytest.fixture
+def df_station_name_input_fixture(spark_session):
+    data = [
+        (1, "Lille - Station 01", False, False),  # valide, pas corrigé
+        (2, "Lille Station 01", False, False),  # invalide (manque le "-")
+        (3, None, False, False),  # invalide (None)
+        (4, "Paris - Station 01", False, False),  # invalide (autre ville)
+        (5, "Lille - Station 123", False, False),  # invalide (numéro > 2 chiffres)
+        (6, "", False, False),  # invalide (vide)
+    ]
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("station_name", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF SORTIE CLEAN STATION NAME
+
+
+@pytest.fixture
+def df_station_name_expected_fixture(spark_session):
+    data = [
+        (1, "Lille - Station 01", False, False),  # validé, inchangé
+        (2, None, False, True),  # invalide
+        (3, None, False, True),  # invalide
+        (4, None, False, True),  # invalide
+        (5, None, False, True),  # invalide
+        (6, None, False, True),  # invalide
+    ]
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("station_name", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF ENTREE CLEAN POSITIVE INT
+
+
+@pytest.fixture
+def df_positive_int_input_fixture(spark_session):
+    data = [
+        (1, "123", False, False),
+        (2, "0", False, False),
+        (3, "-10", False, False),
+        (4, None, False, False),
+        (5, "abc", False, False),
+        (6, "1", False, False),
+        (7, "1.5", False, False),
+    ]
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("positive_int", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF SORTIE CLEAN POSITIVE INT
+
+
+@pytest.fixture
+def expected_positive_int_output_fixture(spark_session):
+    data = [
+        (1, 123, True, False),
+        (2, None, False, True),
+        (3, None, False, True),
+        (4, None, False, True),
+        (5, None, False, True),
+        (6, 1, True, False),
+        (7, None, False, True),
+    ]
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("positive_int", T.IntegerType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+
+@pytest.fixture
+def df_nb_bikes_input_fixture(spark_session):
+    data = [
+        # id, velo_dispo_string, places_libres, capacity, ligne_corrigee, ligne_invalide
+        (1, "5", "10", "20", False, False),      # valeur valide, entre 0 et capacité
+        (2, "-1", "10", "20", False, False),     # velo_dispo_string négatif, corrigé à 0
+        (3, "25", "10", "20", False, False),     # velo_dispo_string > capacity, corrigé à capacity
+        (4, None, "10", "20", False, False),     # velo_dispo_string invalide, recalcul via capacity - places_libres
+        (5, "abc", "10", "20", False, False),    # velo_dispo_string non numérique, recalcul valide
+        (6, None, "15", "10", False, False),     # velo_dispo_string invalide, capacity < places_libres -> 0
+        (7, None, None, "20", False, False),     # places_libres invalide, ligne invalide
+        (8, None, "10", None, False, False),     # capacity invalide, ligne invalide
+        (9, None, None, None, False, False),     # tout invalide
+    ]
+    schema = T.StructType([
+        T.StructField("id", T.IntegerType()),
+        T.StructField("nb_bikes", T.StringType()),
+        T.StructField("places_libres", T.StringType()),
+        T.StructField("capacity", T.StringType()),
+        T.StructField("ligne_corrigee", T.BooleanType()),
+        T.StructField("ligne_invalide", T.BooleanType()),
+    ])
+    return spark_session.createDataFrame(data, schema)
+
+
+@pytest.fixture
+def expected_nb_bikes_output_fixture(spark_session):
+    data = [
+        # id, nb_bikes, ligne_corrigee, ligne_invalide
+        (1, 5, False, False),
+        (2, 10, True, False),
+        (3, 20, True, False),
+        (4, 10, True, False),
+        (5, 10, True, False),
+        (6, 0, True, False),
+        (7, None, False, True),
+        (8, None, False, True),
+        (9, None, False, True),
+    ]
+    schema = T.StructType([
+        T.StructField("id", T.IntegerType()),
+        T.StructField("nb_bikes", T.IntegerType()),
+        T.StructField("ligne_corrigee", T.BooleanType()),
+        T.StructField("ligne_invalide", T.BooleanType()),
+    ])
+    return spark_session.createDataFrame(data, schema)
