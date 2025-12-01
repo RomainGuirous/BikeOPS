@@ -28,7 +28,7 @@ def create_silver_availability_df(spark: SparkSession, df_input: DataFrame=None,
         tuple: Un tuple contenant :
         - df_availability_clean (DataFrame): DataFrame Spark nettoyé des données de disponibilité:
             - station_id (IntegerType): Identifiant de la station (entier positif).
-            - timestamp (TimestampType): Horodatage de la disponibilité.
+            - timestamp (StringType): Horodatage de la disponibilité.
             - bikes_available (IntegerType): Nombre de vélos disponibles.
             - slots_free (IntegerType): Nombre d'emplacements libres.
             - date_partition (DateType): Date pour partitionnement.

@@ -1,20 +1,22 @@
 # region IMPORTS
 import pytest
 from pyspark.sql import types as T
+from datetime import date
 # endregion
 
 
 @pytest.fixture
 def df_availability_input_fixture(spark_session):
     data = [
-        (1, "2025-11-01 08:00:00", "5", "15"),
-        (2, "2025-11-01 09:00:00", "-1", "15"),
-        (3, "2025-11-01 10:00:00", "25", "0"),
-        (4, "invalid_date", "abc", "20"),
-        (5, "2025-11-01 12:00:00", None, None),
+        (1, "101", "2025-11-01 08:00:00", "5", "15"),
+        (2, "101", "2025-11-01 09:00:00", "-1", "15"),
+        (3, "101", "2025-11-01 10:00:00", "25", "0"),
+        (4, "101", "invalid_date", "abc", "20"),
+        (5, "102", "2025-11-01 12:00:00", None, None),
     ]
     schema = T.StructType(
         [
+            T.StructField("id", T.IntegerType()),
             T.StructField("station_id", T.StringType()),
             T.StructField("timestamp", T.StringType()),
             T.StructField("bikes_available", T.StringType()),
@@ -27,15 +29,12 @@ def df_availability_input_fixture(spark_session):
 @pytest.fixture
 def df_stations_capacity_fixture(spark_session):
     data = [
-        (1, "20"),
-        (2, "20"),
-        (3, "20"),
-        (4, "20"),
-        (5, "30"),
+        ("101", "20"),
+        ("102", "30"),
     ]
     schema = T.StructType(
         [
-            T.StructField("station_id", T.IntegerType()),
+            T.StructField("station_id", T.StringType()),
             T.StructField("capacity", T.StringType()),
         ]
     )
@@ -44,13 +43,14 @@ def df_stations_capacity_fixture(spark_session):
 
 @pytest.fixture
 def df_availability_output_fixture(spark_session):
-    from datetime import date
+    
 
     data = [
         # station_id, timestamp (string), bikes_available, slots_free, date_partition
-        (1, "2025-11-01 08:00:00", 5, 15, date(2025, 11, 1)),
+        (1, 101, "2025-11-01 08:00:00", 5, 15, date(2025, 11, 1)),
         (
             2,
+            101,
             "2025-11-01 09:00:00",
             5,
             15,
@@ -58,14 +58,16 @@ def df_availability_output_fixture(spark_session):
         ),
         (
             3,
+            101,
             "2025-11-01 10:00:00",
             20,
             0,
             date(2025, 11, 1),
         ),  # bikes_available corrigé à capacity=20, slots_free recalculé à 0
-        (4, None, 0, 20, None),  # date invalide + valeurs invalides ("abc", "20")
+        (4, 101, None, 0, 20, None),  # date invalide + valeurs invalides ("abc", "20")
         (
             5,
+            102,
             "2025-11-01 12:00:00",
             None,
             None,
@@ -74,6 +76,7 @@ def df_availability_output_fixture(spark_session):
     ]
     schema = T.StructType(
         [
+            T.StructField("id", T.IntegerType()),
             T.StructField("station_id", T.IntegerType()),
             T.StructField("timestamp", T.StringType()),
             T.StructField("bikes_available", T.IntegerType()),

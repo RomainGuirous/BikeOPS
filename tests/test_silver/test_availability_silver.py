@@ -15,8 +15,8 @@ def test_create_silver_availability_df_dataframe(
         spark_session, df_input=df_availability_input_fixture, df_join=df_stations_capacity_fixture
     )
 
-    result_sorted = df_result.orderBy("station_id").drop("station_id")
-    expected_sorted = df_availability_output_fixture.orderBy("station_id").drop("station_id")
+    result_sorted = df_result.orderBy("id").drop("id")
+    expected_sorted = df_availability_output_fixture.orderBy("id").drop("id")
     assert result_sorted.schema == expected_sorted.schema
     assert result_sorted.collect() == expected_sorted.collect()
 

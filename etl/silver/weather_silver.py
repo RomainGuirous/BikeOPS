@@ -17,7 +17,7 @@ from etl.utils.udf import (
 # region FUNCTIONS
 
 
-def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
+def create_silver_weather_df(spark: SparkSession, df_input: DataFrame=None) -> tuple[DataFrame, dict]:
     """
     Crée un DataFrame Spark nettoyé pour les données météo.
 
@@ -26,11 +26,22 @@ def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
 
     Returns:
         tuple: Un tuple contenant :
-        - df_weather_clean (DataFrame): DataFrame Spark nettoyé des données météo.
+        - df_weather_clean (DataFrame): DataFrame Spark nettoyé des données météo:
+            - timestamp (StringType)
+            - temperature_c (FloatType)
+            - rain_mm (FloatType)
+            - weather_condition (StringType)
         - weather_rapport_value (dict): Rapport de qualité des données météo.
+            - total_lignes_brutes (int): Nombre total de lignes en entrée.
+            - total_lignes_corrigees (int): Nombre de lignes corrigées.
+            - total_valeurs_invalides (int): Nombre total de valeurs invalides.
+            - total_lignes_supprimees (int): Nombre de lignes supprimées.
     """
     # lecture du fichier CSV
-    df = read_csv_spark(spark, "/app/data/data_raw/weather_raw.csv")
+    if df_input is None:
+        df = read_csv_spark(spark, "/app/data/data_raw/weather_raw.csv")
+    else:
+        df = df_input
 
     # liste des fonctions de nettoyage à appliquer
     transformations = [
