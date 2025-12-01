@@ -52,7 +52,7 @@ def df_weather_silver_output_df_fixture(spark_session):
 def df_weather_silver_output_rapport_fixture():
     return {
         "total_lignes_brutes": 5,
-        "total_lignes_corrigees": 0, # changer le type ne compte pas, ainsi que ajout date_partition
+        "total_lignes_corrigees": 0,  # changer le type ne compte pas, ainsi que ajout date_partition
         "total_valeurs_invalides": 4,
         "total_lignes_supprimees": 0,
     }

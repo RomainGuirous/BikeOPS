@@ -5,6 +5,7 @@ from tests.common.fixtures.utils.fixture_udf import *
 from tests.common.fixtures.silver.fixture_station_silver import *
 from tests.common.fixtures.silver.fixture_availability_silver import *
 from tests.common.fixtures.silver.fixture_weather_silver import *
+from tests.common.fixtures.gold.fixture_gold_daily import *
 
 
 # region SPARK SESSION FIXTURE
