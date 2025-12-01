@@ -28,7 +28,11 @@ def create_silver_station_df(spark: SparkSession, df_input: DataFrame=None) -> t
             - lat (FloatType): Latitude de la station.
             - lon (FloatType): Longitude de la station.
             - capacity (IntegerType): Capacité de la station.
-        - station_rapport_value (dict): Rapport de qualité des données des stations.
+        - station_rapport_value (dict): Rapport de qualité des données des stations:
+            - total_lignes_brutes (int): Nombre total de lignes en entrée.
+            - total_lignes_corrigees (int): Nombre de lignes corrigées.
+            - total_valeurs_invalides (int): Nombre total de valeurs invalides.
+            - total_lignes_supprimees (int): Nombre de lignes supprimées.
     """
     if df_input is None:
         df = read_csv_spark(spark, "/app/data/data_raw/stations.csv", delimiter=",")
@@ -39,27 +43,27 @@ def create_silver_station_df(spark: SparkSession, df_input: DataFrame=None) -> t
         {
             "col": "station_id",
             "func": clean_positive_int,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "station_name",
             "func": clean_station_name,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "lat",
             "func": clean_latitude,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "lon",
             "func": clean_longitude,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "capacity",
             "func": clean_positive_int,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
     ]
 

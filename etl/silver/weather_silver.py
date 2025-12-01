@@ -37,22 +37,22 @@ def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
         {
             "col": "timestamp",
             "func": clean_date,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "temperature_c",
             "func": clean_temperature,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "rain_mm",
             "func": clean_rain_mm,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "weather_condition",
             "func": clean_weather,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
     ]
 
@@ -65,12 +65,6 @@ def create_silver_weather_df(spark: SparkSession) -> tuple[DataFrame, dict]:
     )
 
     return df_weather_clean, weather_rapport_value
-
-
-# endregion
-
-
-# region MAIN SCRIPT
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ def df_stations_input_fixture(spark_session):
 
 
 @pytest.fixture
-def expected_df_station_df_fixture(spark_session):
+def df_station_output_df_fixture(spark_session):
     data = [
         (1, 1, "Lille - Station 01", 50.62925, 3.057256, 20),
         (2, None, None, None, None, None),
@@ -43,18 +43,16 @@ def expected_df_station_df_fixture(spark_session):
             T.StructField("lat", T.FloatType()),
             T.StructField("lon", T.FloatType()),
             T.StructField("capacity", T.IntegerType()),
-
         ]
     )
     return spark_session.createDataFrame(data, schema)
 
 
 @pytest.fixture
-def expected_df_station_rapport_fixture():
+def df_station_output_rapport_fixture():
     return {
-        "station_id": {"lignes_corrigees": 2, "valeurs_invalides": 1},
-        "station_name": {"lignes_corrigees": 2, "valeurs_invalides": 1},
-        "lat": {"lignes_corrigees": 2, "valeurs_invalides": 1},
-        "lon": {"lignes_corrigees": 1, "valeurs_invalides": 1},
-        "capacity": {"lignes_corrigees": 2, "valeurs_invalides": 1},
+        "total_lignes_brutes": 5,  # total lignes en entrée
+        "total_lignes_corrigees": 4,  # nombre de valeurs corrigées (par exemple station_id invalide + lat, lon, capacity)
+        "total_valeurs_invalides": 4,  # nombre total de valeurs invalides (compte toutes les lignes avec des valeurs invalides)
+        "total_lignes_supprimees": 0,  # aucune ligne supprimée (par défaut)
     }

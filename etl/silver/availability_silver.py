@@ -48,32 +48,22 @@ def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]
         {
             "col": "station_id",
             "func": clean_positive_int,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "timestamp",
             "func": clean_date,
-            "args": ["lignes_corrigees", "valeurs_invalides"],
+            "args": [],
         },
         {
             "col": "bikes_available",
             "func": clean_nb_bikes,
-            "args": [
-                "slots_free",
-                "capacity",
-                "lignes_corrigees",
-                "valeurs_invalides",
-            ],
+            "args": ["slots_free", "capacity"],
         },
         {
             "col": "slots_free",
             "func": clean_nb_bikes,
-            "args": [
-                "bikes_available",
-                "capacity",
-                "lignes_corrigees",
-                "valeurs_invalides",
-            ],
+            "args": ["bikes_available", "capacity"],
         },
     ]
 
