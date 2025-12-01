@@ -13,7 +13,7 @@ from etl.utils.udf import (
 # region FUNCTIONS
 
 
-def create_silver_station_df(spark: SparkSession) -> tuple[DataFrame, dict]:
+def create_silver_station_df(spark: SparkSession, df_input: DataFrame=None) -> tuple[DataFrame, dict]:
     """
     Crée un DataFrame Spark nettoyé pour les données des stations.
 
@@ -22,10 +22,18 @@ def create_silver_station_df(spark: SparkSession) -> tuple[DataFrame, dict]:
 
     Returns:
         tuple: Un tuple contenant :
-            - df_station_clean (DataFrame): DataFrame Spark nettoyé des données des stations.
-            - station_rapport_value (dict): Rapport de qualité des données des stations.
+        - df_station_clean (DataFrame): DataFrame Spark nettoyé des données des stations:
+            - station_id (IntegerType): Identifiant de la station (entier positif).
+            - station_name (StringType): Nom de la station (chaîne de caractères propre).
+            - lat (FloatType): Latitude de la station.
+            - lon (FloatType): Longitude de la station.
+            - capacity (IntegerType): Capacité de la station.
+        - station_rapport_value (dict): Rapport de qualité des données des stations.
     """
-    df = read_csv_spark(spark, "/app/data/data_raw/stations.csv", delimiter=",")
+    if df_input is None:
+        df = read_csv_spark(spark, "/app/data/data_raw/stations.csv", delimiter=",")
+    else:
+        df = df_input
 
     transformations = [
         {

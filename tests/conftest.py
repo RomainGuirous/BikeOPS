@@ -1,7 +1,8 @@
 from pyspark.sql import SparkSession
 import pytest
-from tests.common.fixtures.fixture_spark_functions import *
-from tests.common.fixtures.fixture_udf import *
+from tests.common.fixtures.utils.fixture_spark_functions import *
+from tests.common.fixtures.utils.fixture_udf import *
+from tests.common.fixtures.silver.fixture_station_silver import *
 
 
 # region SPARK SESSION FIXTURE
