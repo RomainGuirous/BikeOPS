@@ -208,7 +208,7 @@ def df_rain_output_fixture(spark_session):
 
 
 @pytest.fixture
-def df_weather_input_fixture(spark_session):
+def df_weather_udf_input_fixture(spark_session):
     data = [
         (1, "Rain"),  # valide
         (2, "Cloudy"),  # valide
@@ -237,7 +237,7 @@ def df_weather_input_fixture(spark_session):
 
 
 @pytest.fixture
-def df_weather_output_fixture(spark_session):
+def df_weather_udf_output_fixture(spark_session):
     data = [
         (1, ("Rain", False, False)),
         (2, ("Cloudy", False, False)),

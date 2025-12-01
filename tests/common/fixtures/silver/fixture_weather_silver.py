@@ -6,7 +6,7 @@ from datetime import date
 
 
 @pytest.fixture
-def df_weather_input_fixture(spark_session):
+def df_weather_silver_input_fixture(spark_session):
     data = [
         (1, "2025-12-01 12:00:00", "15.5", "0.0", "Sunny"),
         (2, "2025-12-01 13:00:00", "-5.2", "2.3", "Rain"),
@@ -27,7 +27,7 @@ def df_weather_input_fixture(spark_session):
 
 
 @pytest.fixture
-def df_weather_output_fixture(spark_session):
+def df_weather_silver_output_df_fixture(spark_session):
     data = [
         (1, "2025-12-01 12:00:00", 15.5, 0.0, None, date(2025, 12, 1)),
         (2, "2025-12-01 13:00:00", -5.2, 2.3, "Rain", date(2025, 12, 1)),
@@ -49,11 +49,11 @@ def df_weather_output_fixture(spark_session):
 
 
 @pytest.fixture
-def weather_rapport_value_fixture():
+def df_weather_silver_output_rapport_fixture():
     return {
         "total_lignes_brutes": 5,
-        "total_lignes_corrigees": 5,
-        "total_valeurs_invalides": 3,
+        "total_lignes_corrigees": 0, # changer le type ne compte pas, ainsi que ajout date_partition
+        "total_valeurs_invalides": 4,
         "total_lignes_supprimees": 0,
     }
 

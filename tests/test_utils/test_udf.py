@@ -86,17 +86,17 @@ def test_clean_rain_mm(
 
 
 def test_clean_weather(
-    df_weather_input_fixture: pytest.fixture, df_weather_output_fixture: pytest.fixture
+    df_weather_udf_input_fixture: pytest.fixture, df_weather_udf_output_fixture: pytest.fixture
 ):
     """
     Teste que les fonctions de nettoyage des données météo fonctionnent correctement ensemble.
     """
-    df_result = df_weather_input_fixture.withColumn(
+    df_result = df_weather_udf_input_fixture.withColumn(
         "weather_condition", clean_weather("weather_condition")
     )
 
     result_sorted = df_result.orderBy("id").drop("id")
-    expected_sorted = df_weather_output_fixture.orderBy("id").drop("id")
+    expected_sorted = df_weather_udf_output_fixture.orderBy("id").drop("id")
 
     assert result_sorted.schema == expected_sorted.schema
     assert result_sorted.collect() == expected_sorted.collect()
@@ -224,4 +224,4 @@ def test_clean_nb_bikes(
 
 # endregion
 
-# # pytest tests/test_utils/test_udf.py
+# pytest tests/test_utils/test_udf.py
