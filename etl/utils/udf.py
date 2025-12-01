@@ -168,9 +168,7 @@ def clean_temperature(temperature_string: str) -> tuple[float, bool, bool]:
         ]
     )
 )
-def clean_rain_mm(
-    rain_string: str
-) -> tuple[float, bool, bool]:
+def clean_rain_mm(rain_string: str) -> tuple[float, bool, bool]:
     """
     Fonction UDF pour nettoyer et formater une valeur de précipitations donnée sous forme de chaîne de caractères.
 
@@ -225,9 +223,7 @@ def clean_rain_mm(
         ]
     )
 )
-def clean_weather(
-    weather_condition: str
-) -> tuple[str | None, bool, bool]:
+def clean_weather(weather_condition: str) -> tuple[str | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider une condition météorologique donnée sous forme de chaîne de caractères.
 
@@ -280,9 +276,7 @@ def clean_weather(
         ]
     )
 )
-def clean_latitude(
-    latitude: str
-) -> tuple[float | None, bool, bool]:
+def clean_latitude(latitude: str) -> tuple[float | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider une latitude donnée sous forme de chaîne de caractères.
 
@@ -334,9 +328,7 @@ def clean_latitude(
         ]
     )
 )
-def clean_longitude(
-    longitude: str
-) -> tuple[float | None, bool, bool]:
+def clean_longitude(longitude: str) -> tuple[float | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider une longitude donnée sous forme de chaîne de caractères.
 
@@ -388,9 +380,7 @@ def clean_longitude(
         ]
     )
 )
-def clean_station_name(
-    station_name: str
-) -> tuple[str | None, bool, bool]:
+def clean_station_name(station_name: str) -> tuple[str | None, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider un nom de station donné sous forme de chaîne de caractères.
 
@@ -443,9 +433,7 @@ def clean_station_name(
         ]
     )
 )
-def clean_positive_int(
-    positive_int_string: str
-) -> tuple[int, bool, bool]:
+def clean_positive_int(positive_int_string: str) -> tuple[int, bool, bool]:
     """
     Fonction UDF pour nettoyer et valider un entier positif donné sous forme de chaîne de caractères.
 
@@ -506,6 +494,16 @@ def clean_nb_bikes(
     """
     Fonction UDF pour nettoyer et valider le nombre de vélos disponibles en fonction des données fournies.
 
+    /!\ ATTENTION /!\ 
+
+    Dans ce projet, cette fonction est appelée deux fois de suite pour nettoyer deux colonnes distinctes :
+    "bikes_available" et "slots_free".
+    L'ordre d'appel des fonctions détermine la priorité de correction entre ces colonnes :
+    la deuxième colonne appelée est prioritaire, et la première est corrigée en fonction de cette dernière.
+    Il est donc important de bien respecter cet ordre lors de l'application.
+    
+    /!\ ATTENTION /!\ 
+
     Args:
         velo_dispo_string (str): Le nombre de vélos disponibles sous forme de chaîne de caractères.
         places_libres (str): Le nombre de places libres sous forme de chaîne de caractères.
@@ -526,7 +524,7 @@ def clean_nb_bikes(
     """
     ligne_corrigee = False
     ligne_invalide = False
-    
+
     try:
         # Vérification des valeurs nulles ou non numériques pour places_libres et capacity
         places_libres_int = (

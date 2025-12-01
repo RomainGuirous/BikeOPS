@@ -3,6 +3,7 @@ import pytest
 from tests.common.fixtures.utils.fixture_spark_functions import *
 from tests.common.fixtures.utils.fixture_udf import *
 from tests.common.fixtures.silver.fixture_station_silver import *
+from tests.common.fixtures.silver.fixture_availability_silver import *
 
 
 # region SPARK SESSION FIXTURE

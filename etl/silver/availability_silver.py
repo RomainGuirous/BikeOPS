@@ -17,7 +17,7 @@ from etl.utils.spark_functions import (
 # region FUNCTIONS
 
 
-def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]:
+def create_silver_availability_df(spark: SparkSession, df_input: DataFrame=None, df_join: DataFrame=None) -> tuple[DataFrame, dict]:
     """
     Crée un DataFrame Spark nettoyé pour les données de disponibilité des vélos.
 
@@ -26,19 +26,34 @@ def create_silver_availability_df(spark: SparkSession) -> tuple[DataFrame, dict]
 
     Returns:
         tuple: Un tuple contenant :
-        - df_availability_clean (DataFrame): DataFrame Spark nettoyé des données de disponibilité.
-        - availability_rapport_value (dict): Rapport de qualité des données de disponibilité.
+        - df_availability_clean (DataFrame): DataFrame Spark nettoyé des données de disponibilité:
+            - station_id (IntegerType): Identifiant de la station (entier positif).
+            - timestamp (TimestampType): Horodatage de la disponibilité.
+            - bikes_available (IntegerType): Nombre de vélos disponibles.
+            - slots_free (IntegerType): Nombre d'emplacements libres.
+            - date_partition (DateType): Date pour partitionnement.
+        - availability_rapport_value (dict): Rapport de qualité des données de disponibilité:
+            - total_lignes_brutes (int): Nombre total de lignes en entrée.
+            - total_lignes_corrigees (int): Nombre de lignes corrigées.
+            - total_valeurs_invalides (int): Nombre total de valeurs invalides.
+            - total_lignes_supprimees (int): Nombre de lignes supprimées.
     """
     # lecture du fichier CSV
-    df = read_csv_spark(spark, "/app/data/data_raw/availability_raw.csv")
+    if df_input is None:
+        df = read_csv_spark(spark, "/app/data/data_raw/availability_raw.csv")
+    else:
+        df = df_input
 
     # extraction colonnes station_id et capacity depuis stations.csv
-    capacity = read_csv_spark(
-        spark,
-        "/app/data/data_raw/stations.csv",
-        ["station_id", "capacity"],
-        delimiter=",",
-    )
+    if df_join is None:
+        capacity = read_csv_spark(
+            spark,
+            "/app/data/data_raw/stations.csv",
+            ["station_id", "capacity"],
+            delimiter=",",
+        )
+    else:
+        capacity = df_join
 
     # jointure pour ajouter la capacité
     df = df.join(capacity, on="station_id", how="left")
