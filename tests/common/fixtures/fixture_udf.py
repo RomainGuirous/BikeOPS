@@ -258,3 +258,123 @@ def expected_weather_output(spark_session):
 
 
 # endregion
+
+# region DF ENTREE CLEAN LATITUDE
+
+
+@pytest.fixture
+def df_latitude_input(spark_session):
+    data = [
+        (1, "45.0", False, False),  # valide
+        (2, "-90", False, False),  # limite valide
+        (3, "90", False, False),  # limite valide
+        (4, "91", False, False),  # invalide (>90)
+        (5, "-91", False, False),  # invalide (<-90)
+        (6, "", False, False),  # vide -> invalide
+        (7, None, False, False),  # None -> invalide
+        (8, "abc", False, False),  # non convertible -> invalide
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("latitude", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF SORTIE CLEAN LATITUDE
+
+
+@pytest.fixture
+def expected_latitude_output(spark_session):
+    data = [
+        (1, 45.0, False, False),
+        (2, -90.0, False, False),
+        (3, 90.0, False, False),
+        (4, None, False, True),      # invalide
+        (5, None, False, True),      # invalide
+        (6, None, False, True),      # invalide
+        (7, None, False, True),      # invalide
+        (8, None, False, True),      # invalide
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("latitude", T.FloatType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF ENTREE CLEAN LONGITUDE
+
+
+@pytest.fixture
+def df_longitude_input(spark_session):
+    data = [
+        (1, "45.0", False, False),       # valide
+        (2, "-180", False, False),       # limite valide
+        (3, "180", False, False),        # limite valide
+        (4, "181", False, False),        # invalide (>180)
+        (5, "-181", False, False),       # invalide (<-180)
+        (6, "", False, False),           # vide -> invalide
+        (7, None, False, False),         # None -> invalide
+        (8, "abc", False, False),        # non convertible -> invalide
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("longitude", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF SORTIE CLEAN LONGITUDE
+
+
+@pytest.fixture
+def expected_longitude_output(spark_session):
+    data = [
+        (1, 45.0, False, False),
+        (2, -180.0, False, False),
+        (3, 180.0, False, False),
+        (4, None, False, True),      # invalide
+        (5, None, False, True),      # invalide
+        (6, None, False, True),      # invalide
+        (7, None, False, True),      # invalide
+        (8, None, False, True),      # invalide
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("longitude", T.FloatType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion

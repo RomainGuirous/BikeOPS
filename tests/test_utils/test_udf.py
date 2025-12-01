@@ -5,7 +5,9 @@ from etl.utils.udf import (
     clean_date,
     clean_temperature,
     clean_rain_mm,
-    clean_weather
+    clean_weather,
+    clean_latitude,
+    clean_longitude
 )
 # endregion
 
@@ -116,7 +118,9 @@ def test_clean_rain_mm(
 # region CLEAN WEATHER
 
 
-def test_clean_weather(df_weather_input: pytest.fixture, expected_weather_output: pytest.fixture):
+def test_clean_weather(
+    df_weather_input: pytest.fixture, expected_weather_output: pytest.fixture
+):
     """
     Teste que les fonctions de nettoyage des données météo fonctionnent correctement ensemble.
     """
@@ -130,7 +134,9 @@ def test_clean_weather(df_weather_input: pytest.fixture, expected_weather_output
     )
 
     result_sorted = df_result.orderBy("id").select(
-        F.col("cleaned.value").alias("weather_condition"),  # .value => struct returned by UDF
+        F.col("cleaned.value").alias(
+            "weather_condition"
+        ),  # .value => struct returned by UDF
         F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
         F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
     )
@@ -146,5 +152,73 @@ def test_clean_weather(df_weather_input: pytest.fixture, expected_weather_output
 
 # endregion
 
+# region CLEAN LATITUDE
 
+
+def test_clean_latitude(
+    df_latitude_input: pytest.fixture, expected_latitude_output: pytest.fixture
+):
+    """
+    Teste que la fonction clean_latitude nettoie correctement les latitudes.
+    """
+    df_result = df_latitude_input.withColumn(
+        "cleaned",
+        clean_latitude(
+            F.col("latitude"),
+            "ligne_corrigee",
+            "ligne_invalide",
+        ),
+    )
+
+    result_sorted = df_result.orderBy("id").select(
+        F.col("cleaned.value").alias("latitude"),
+        F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
+        F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
+    )
+    expected_sorted = expected_latitude_output.orderBy("id").select(
+        F.col("latitude"),
+        F.col("ligne_corrigee"),
+        F.col("ligne_invalide"),
+    )
+
+    assert result_sorted.schema == expected_sorted.schema
+    assert result_sorted.collect() == expected_sorted.collect()
+
+
+# endregion
+
+# region CLEAN LONGITUDE
+
+
+def test_clean_longitude(
+    df_longitude_input: pytest.fixture, expected_longitude_output: pytest.fixture
+):
+    """
+    Teste que la fonction clean_longitude nettoie correctement les longitudes.
+    """
+    df_result = df_longitude_input.withColumn(
+        "cleaned",
+        clean_longitude(
+            F.col("longitude"),
+            "ligne_corrigee",
+            "ligne_invalide",
+        ),
+    )
+
+    result_sorted = df_result.orderBy("id").select(
+        F.col("cleaned.value").alias("longitude"),
+        F.col("cleaned.ligne_corrigee").alias("ligne_corrigee"),
+        F.col("cleaned.ligne_invalide").alias("ligne_invalide"),
+    )
+    expected_sorted = expected_longitude_output.orderBy("id").select(
+        F.col("longitude"),
+        F.col("ligne_corrigee"),
+        F.col("ligne_invalide"),
+    )
+
+    assert result_sorted.schema == expected_sorted.schema
+    assert result_sorted.collect() == expected_sorted.collect()
+
+
+# endregion
 # pytest tests/test_utils/test_udf.py
