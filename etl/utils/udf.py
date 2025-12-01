@@ -240,11 +240,13 @@ def clean_weather(
             - ligne_corrigee (BooleanType)
             - ligne_invalide (BooleanType)
     """
+    liste_conditions_valides = ["Rain", "Cloudy", "Clear", "Drizzle", "Fog"]
+    
     if not weather_condition:
         ligne_invalide = True
         return None, ligne_corrigee, ligne_invalide
     try:
-        if weather_condition in ["Rain", "Cloudy", "Clear", "Drizzle", "Fog"]:
+        if weather_condition in liste_conditions_valides:
             return weather_condition, ligne_corrigee, ligne_invalide
         else:
             ligne_invalide = True

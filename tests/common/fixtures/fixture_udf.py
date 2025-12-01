@@ -136,3 +136,125 @@ def expected_temperature_output(spark_session):
 
 
 # endregion
+
+# region DF ENTREE CLEAN RAIN MM
+
+
+@pytest.fixture
+def df_rain_input(spark_session):
+    data = [
+        (1, "12.5", False, False),  # Valide
+        (2, "3,7", False, False),  # Virgule -> corrigée
+        (3, "-1.2", False, False),  # Négatif -> invalide
+        (4, "", False, False),  # Chaîne vide -> invalide
+        (5, None, False, False),  # None -> invalide
+        (6, "abc", False, False),  # Non convertible -> invalide
+        (7, "0", False, False),  # Zéro -> valide
+        (8, "25", False, False),  # Valide entier
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("rain_string", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF SORTIE CLEAN RAIN MM
+
+
+@pytest.fixture
+def expected_rain_output(spark_session):
+    data = [
+        (1, 12.5, False, False),  # "12.5"
+        (2, 3.7, True, False),  # "3,7" -> corrigé
+        (3, None, False, True),  # "-1.2" -> invalide
+        (4, None, False, True),  # "" -> invalide
+        (5, None, False, True),  # None -> invalide
+        (6, None, False, True),  # "abc" -> invalide
+        (7, 0.0, False, False),  # "0"
+        (8, 25.0, False, False),  # "25"
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("rain_string", T.DoubleType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF ENTREE CLEAN WEATHER
+
+
+@pytest.fixture
+def df_weather_input(spark_session):
+    data = [
+        (1, "Rain", False, False),  # valide
+        (2, "Cloudy", False, False),  # valide
+        (3, "Clear", False, False),  # valide
+        (4, "Drizzle", False, False),  # valide
+        (5, "Fog", False, False),  # valide
+        (6, "Sunny", False, False),  # invalide
+        (7, "", False, False),  # vide -> invalide
+        (8, None, False, False),  # None -> invalide
+        (9, "rain", False, False),  # sensible à la casse, invalide
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("weather_condition", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
+
+# region DF SORTIE CLEAN WEATHER
+
+
+@pytest.fixture
+def expected_weather_output(spark_session):
+    data = [
+        (1, "Rain", False, False),
+        (2, "Cloudy", False, False),
+        (3, "Clear", False, False),
+        (4, "Drizzle", False, False),
+        (5, "Fog", False, False),
+        (6, None, False, True),  # invalide
+        (7, None, False, True),  # invalide
+        (8, None, False, True),  # invalide
+        (9, None, False, True),  # invalide (casse sensible)
+    ]
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType()),
+            T.StructField("weather_condition", T.StringType()),
+            T.StructField("ligne_corrigee", T.BooleanType()),
+            T.StructField("ligne_invalide", T.BooleanType()),
+        ]
+    )
+
+    return spark_session.createDataFrame(data, schema)
+
+
+# endregion
