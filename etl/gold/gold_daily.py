@@ -344,7 +344,7 @@ def fact_meteo_dominante(
         fact_meteo_dominante["weather_condition"]
         == dim_weather_df["weather_condition"],
         "left",
-    ).drop("weather_condition")
+    ).drop("weather_condition") # garder weather_condition_key uniquement
 
     return fact_meteo_dominante
 
@@ -353,6 +353,7 @@ def fact_meteo_dominante(
 # -----------------------
 
 # les  % de stations saturées par jour
+
 
 def fact_station_saturee_per_day(
     spark: SparkSession, df_join_availability_station: DataFrame
@@ -391,7 +392,6 @@ def fact_station_saturee_per_day(
 
     dim_date_df = dim_date(spark)
     dim_station_df = dim_station(df_station_silver)
-    # dim_time_df = dim_time(spark)  # ta dim_time avec hour, minute, time_key
 
     # Jointure avec dim_date pour récupérer la clé surrogate date_key
     fact_station_saturee_per_day = fact_station_saturee_per_day.join(
@@ -400,14 +400,6 @@ def fact_station_saturee_per_day(
         == dim_date_df["date"],
         "left",
     ).drop("availability_date_partition", "date")
-
-    # # Jointure avec dim_time pour récupérer la clé surrogate time_key
-    # fact_taux_occupation = fact_taux_occupation.withColumn(
-    #     "hour", F.hour("availability_timestamp")
-    # ).withColumn("minute", F.minute("availability_timestamp"))
-    # fact_taux_occupation = fact_taux_occupation.join(
-    #     dim_time_df, on=["hour", "minute"], how="left"
-    # ).drop("hour", "minute", "availability_timestamp")
 
     # Jointure avec dim_station pour récupérer la clé surrogate station_key
     fact_station_saturee_per_day = (
@@ -422,7 +414,9 @@ def fact_station_saturee_per_day(
 
     return fact_station_saturee_per_day
 
+
 # les 5 stations les plus saturées par jour (5 lignes par jour)
+
 
 def fact_top_5_station_saturee_per_day(
     spark: SparkSession,
@@ -453,9 +447,12 @@ def fact_top_5_station_saturee_per_day(
     )
     return fact_top_5_station_saturee_per_day
 
+
 # liste des 5 stations les plus saturées par jour
 
-def fact_top5_array(spark: SparkSession,
+
+def fact_top5_array(
+    spark: SparkSession,
     df_join_availability_station: DataFrame,
 ) -> DataFrame:
     """
@@ -471,7 +468,7 @@ def fact_top5_array(spark: SparkSession,
         fact_top5_array (DataFrame): table de faits avec le top 5 des stations les plus saturées par jour sous forme de liste
     """
     fact_top5_array = (
-        fact_top_5_station_saturee_per_day(spark,df_join_availability_station)
+        fact_top_5_station_saturee_per_day(spark, df_join_availability_station)
         .groupBy("date_key")
         .agg(
             F.collect_list(F.struct("station_key", "station_saturee")).alias(
@@ -497,11 +494,11 @@ def availability_daily_gold(
     """
     Création de la table factuelle availability_daily_gold
     Colonnes:
-    - availability_date_partition (date)
+    - date_key (int) : clé surrogate de la date
     - avg_bikes_available_day (float)
     - taux_occupation_day (float)
-    - weather_condition_day (string)
-    - top_5_stations_day (array)
+    - weather_condition_key_day (int) : clé surrogate de la condition météo dominante du jour
+    - top_5_stations_day (array) : liste des 5 stations les plus saturées du jour
 
     Args:
         df_availability_silver (DataFrame): dataframe silver de la disponibilité des vélos
@@ -513,38 +510,39 @@ def availability_daily_gold(
     """
     availability_daily_gold = (
         (
-            fact_avg_bikes_available_per_day_and_station(spark, df_availability_silver)
+            fact_avg_bikes_available_per_day_and_station(
+                spark, df_availability_silver, df_station_silver
+            )
             .join(
                 fact_meteo_dominante(spark, df_weather_silver),
-                fact_avg_bikes_available_per_day_and_station(
-                    spark, df_availability_silver
-                )["availability_date_partition"]
-                == fact_meteo_dominante(spark, df_weather_silver)["weather_date_partition"],
+                "date_key",
                 "inner",
             )
             .join(
-                fact_taux_occupation(spark, df_join_availability_station),
-                "availability_date_partition",
+                fact_taux_occupation(
+                    spark, df_join_availability_station, df_station_silver
+                ),
+                "date_key",
                 "inner",
             )
             .join(
                 fact_top5_array(spark, df_join_availability_station),
-                "availability_date_partition",
+                "date_key",
                 "inner",
             )
         )
         .select(
-            "availability_date_partition",
+            "date_key",
             "avg_bikes_available",
             "taux_occupation",
-            "weather_condition",
+            "weather_condition_key",
             "top_5_stations",
         )
-        .groupBy("availability_date_partition")
+        .groupBy("date_key")
         .agg(
             F.round(F.avg("avg_bikes_available"), 2).alias("avg_bikes_available_day"),
             F.round(F.avg("taux_occupation"), 2).alias("taux_occupation_day"),
-            F.first("weather_condition").alias("weather_condition_day"),
+            F.first("weather_condition_key").alias("weather_condition_key_day"),
             F.first("top_5_stations").alias("top_5_stations_day"),
         )
     )
@@ -600,14 +598,13 @@ if __name__ == "__main__":
         "left",
     )
 
-    # # création de la table factuelle gold_daily
-    # df_gold = availability_daily_gold(
-    #     spark, df_availability_silver, df_weather_silver, df_join_availability_station
-    # )
+    # création de la table factuelle gold_daily
+    df_gold = availability_daily_gold(
+        spark, df_availability_silver, df_weather_silver, df_join_availability_station
+    )
 
-    # df_gold.show()
-    df = fact_top5_array(spark, df_join_availability_station)
-    df.show()
+    df_gold.show()
+    
 
 # endregion
 
