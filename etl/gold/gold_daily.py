@@ -625,25 +625,20 @@ if __name__ == "__main__":
     )
 
     # === DF GOLD DAILY ====
-    # création des dataframes dimensionnels nécessaires
-    dim_station_df = dim_station(df_station_silver)
-    dim_weather_df = dim_weather(df_weather_silver)
-    dim_date_df = dim_date(spark)
-    dim_time_df = dim_time(spark)
+  
+    # /!\ si dataframe plus conséquent et réutilisation tables dimensionnelles /!\:
+    # Création des tables dimensionnelles **avec cache**
+    dim_station_df = dim_station(df_station_silver).cache()
+    dim_weather_df = dim_weather(df_weather_silver).cache()
+    dim_date_df = dim_date(spark).cache()
+    dim_time_df = dim_time(spark).cache()
 
-    # # /!\ si dataframe plus conséquent et réutilisation tables dimensionnelles /!\:
-    # # Création des tables dimensionnelles **avec cache**
-    # dim_station_df = dim_station(df_station_silver).cache()
-    # dim_weather_df = dim_weather(df_weather_silver).cache()
-    # dim_date_df = dim_date(spark).cache()
-    # dim_time_df = dim_time(spark).cache()
-
-    # # Forcer le calcul immédiat pour "remplir" le cache
-    # # spark=> lazy evaluation, les transformations ne sont pas exécutées tant qu'une action n'est pas appelée, .count() en est une peu couteuse en ressources
-    # dim_station_df.count()
-    # dim_weather_df.count()
-    # dim_date_df.count()
-    # dim_time_df.count()
+    # Forcer le calcul immédiat pour "remplir" le cache
+    # spark=> lazy evaluation, les transformations ne sont pas exécutées tant qu'une action n'est pas appelée, .count() en est une peu couteuse en ressources
+    dim_station_df.count()
+    dim_weather_df.count()
+    dim_date_df.count()
+    dim_time_df.count()
 
     # création de la table factuelle gold_daily
     df_gold = availability_daily_gold(
@@ -656,8 +651,7 @@ if __name__ == "__main__":
         dim_weather_df,
     )
 
-    # df_gold.show()
-    print(f"==========================\nNOMBRE DE COEURS :{spark.sparkContext.defaultParallelism}\n==========================")
+    df_gold.show()
 
 
 # endregion
