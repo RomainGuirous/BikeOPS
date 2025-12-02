@@ -1,10 +1,10 @@
 # region IMPORTS
-from pyspark.sql import SparkSession, functions as F, DataFrame
-
+from pyspark.sql import SparkSession, functions as F, DataFrame, types as T
 from etl.silver.availability_silver import create_silver_availability_df
 from etl.silver.weather_silver import create_silver_weather_df
 from etl.silver.station_silver import create_silver_station_df
 from pyspark.sql.window import Window
+import pandas as pd
 # endregion
 
 
@@ -96,50 +96,43 @@ def dim_weather(df_weather_silver: DataFrame) -> DataFrame:
 
 def dim_date(
     spark: SparkSession, start_date: str = "2025-01-01", end_date: str = "2025-12-31"
-) -> DataFrame:
-    """
-    Création de la table dimensionnelle des dates
-    Colonnes:
-    - date (date)
-    - year (int)
-    - month (int)
-    - day (int)
-    - quarter (int)
-    - day_of_week (string)
-    - day_of_week_num (int)
-    - is_weekend (boolean)
-    - week_of_year (int)
+):
+    # Création d'un DataFrame Pandas
+    dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
-    Args:
-        spark (SparkSession): session Spark
-        start_date (str): date de début au format "YYYY-MM-DD"
-        end_date (str): date de fin au format "YYYY-MM-DD"
-
-    Returns:
-        dim_date (DataFrame): table dimensionnelle des dates
-    """
-    # Calcul du nombre de jours entre start_date et end_date inclus
-    num_days = spark.sql(
-        f"SELECT datediff(to_date('{end_date}'), to_date('{start_date}')) + 1 AS diff"
-    ).collect()[0]["diff"]
-
-    dim_date = (
-        spark.range(num_days)
-        .withColumn("date", F.date_add(F.lit(start_date), F.col("id").cast("int")))
-        .drop("id")
-        .withColumn("year", F.year("date"))
-        .withColumn("month", F.month("date"))
-        .withColumn("day", F.dayofmonth("date"))
-        .withColumn("quarter", F.quarter("date"))
-        .withColumn(
-            "day_of_week", F.date_format("date", "E")
-        )  # Jour abrégé (Mon, Tue...)
-        # Jour de la semaine en nombre ISO (1=lundi, ..., 7=dimanche)
-        .withColumn("day_of_week_num", ((F.dayofweek("date") + 5) % 7 + 1))
-        .withColumn("is_weekend", (F.col("day_of_week_num") >= 6).cast("boolean"))
-        .withColumn("week_of_year", F.weekofyear("date"))
+    df = pd.DataFrame(
+        {
+            "date": dates,
+            "year": dates.year,
+            "month": dates.month,
+            "day": dates.day,
+            "quarter": dates.quarter,
+            "day_of_week": dates.day_name().str[:3],  # abrégé (Mon, Tue, ...)
+            "day_of_week_num": dates.weekday + 1,  # lundi=1,...,dimanche=7
+            "is_weekend": dates.weekday >= 5,
+            "week_of_year": dates.isocalendar().week,  # semaine ISO 8601
+            "iso_year": dates.isocalendar().year,  # année ISO pour gérer les semaines chevauchantes
+        }
     )
-    return dim_date
+
+    # Conversion en Spark DataFrame
+    sdf = spark.createDataFrame(df)
+
+    # Si tu veux, tu peux caster les colonnes correctement
+    sdf = (
+        sdf.withColumn("date", F.col("date").cast(T.DateType()))
+        .withColumn("year", F.col("year").cast(T.IntegerType()))
+        .withColumn("month", F.col("month").cast(T.IntegerType()))
+        .withColumn("day", F.col("day").cast(T.IntegerType()))
+        .withColumn("quarter", F.col("quarter").cast(T.IntegerType()))
+        .withColumn("day_of_week_num", F.col("day_of_week_num").cast(T.IntegerType()))
+        .withColumn("is_weekend", F.col("is_weekend").cast(T.BooleanType()))
+        .withColumn("week_of_year", F.col("week_of_year").cast(T.IntegerType()))
+        .withColumn("iso_year", F.col("iso_year").cast(T.IntegerType()))
+        .withColumn("date_key", F.monotonically_increasing_id())
+    )
+
+    return sdf
 
 
 # endregion
@@ -154,7 +147,6 @@ def dim_time(spark: SparkSession) -> DataFrame:
     Colonnes:
     - hour (int)
     - minute (int)
-    - second (int)
     - time_key (int)
 
     Args:
@@ -164,13 +156,12 @@ def dim_time(spark: SparkSession) -> DataFrame:
         dim_time (DataFrame): table dimensionnelle du temps
     """
     dim_time = (
-        spark.range(24 * 60 * 60)  # Nombre total de secondes dans une journée
-        .withColumn("hour", (F.col("id") / 3600).cast("int"))
-        .withColumn("minute", ((F.col("id") % 3600) / 60).cast("int"))
-        .withColumn("second", (F.col("id") % 60).cast("int"))
+        spark.range(24 * 60)  # Nombre total de minutes dans une journée
+        .withColumn("hour", (F.col("id") / 60).cast("int"))
+        .withColumn("minute", (F.col("id") % 60).cast("int"))
         .withColumn("time_key", F.col("id"))  # id unique qui sert de clé surrogate
         .drop("id")
-        .orderBy("hour", "minute", "second")
+        .orderBy("hour", "minute")
     )
     return dim_time
 
@@ -189,26 +180,53 @@ def dim_time(spark: SparkSession) -> DataFrame:
 
 
 def fact_avg_bikes_available_per_day_and_station(
+    spark: SparkSession,
     df_availability_silver: DataFrame,
+    df_station_silver: DataFrame,
 ) -> DataFrame:
     """
     Création de la table de faits de la moyenne de vélos disponibles par jour et par station
     Colonnes:
-    - availability_date_partition (date)
-    - station_id (int)
+    - date_key (int) : clé surrogate de la date
+    - station_key (int) : clé surrogate de la station
     - avg_bikes_available (float)
-
     Args:
+        spark (SparkSession): session Spark
         df_availability_silver (DataFrame): dataframe silver de la disponibilité des vélos
+        df_station_silver (DataFrame): dataframe silver des stations
 
     Returns:
         fact_avg_velo_dispo_per_day_and_station (DataFrame): table de faits de la moyenne de vélos disponibles par jour et par station
     """
+    dim_date_df = dim_date(spark)
+    dim_station_df = dim_station(df_station_silver)
+
     fact_avg_velo_dispo_per_day_and_station = (
         df_availability_silver.groupBy("availability_date_partition", "station_id")
         .agg(F.round(F.avg("bikes_available"), 2).alias("avg_bikes_available"))
         .orderBy("availability_date_partition", "station_id")
     )
+
+    # Jointure avec dim_date pour obtenir la clé surrogate date_key
+    fact_avg_velo_dispo_per_day_and_station = (
+        fact_avg_velo_dispo_per_day_and_station.join(
+            dim_date_df.select("date", "date_key"),
+            fact_avg_velo_dispo_per_day_and_station["availability_date_partition"]
+            == dim_date_df["date"],
+            "left",
+        ).drop("availability_date_partition", "date")
+    )
+
+    # Jointure avec dim_station pour obtenir la clé surrogate station_key
+    fact_avg_velo_dispo_per_day_and_station = (
+        fact_avg_velo_dispo_per_day_and_station.join(
+            dim_station_df.select("station_id", "station_key"),
+            fact_avg_velo_dispo_per_day_and_station["station_id"]
+            == dim_station_df["station_id"],
+            "left",
+        ).drop("station_id")
+    )
+
     return fact_avg_velo_dispo_per_day_and_station
 
 
@@ -218,19 +236,24 @@ def fact_avg_bikes_available_per_day_and_station(
 # ---------------
 
 
-def fact_taux_occupation(df_availability_silver: DataFrame) -> DataFrame:
+def fact_taux_occupation(
+    spark: SparkSession,
+    df_availability_silver: DataFrame,
+    df_station_silver: DataFrame,
+) -> DataFrame:
     """
     Création de la table de faits du taux d'occupation des vélos
     Colonnes:
-    - availability_date_partition (date)
-    - station_id (int)
     - taux_occupation (float)
+    - date_key (int) : clé surrogate de la date
+    - time_key (int) : clé surrogate du temps (heure, minute)
+    - station_key (int) : clé surrogate de la station
 
     Args:
         df_availability_silver (DataFrame): dataframe silver de la disponibilité des vélos
 
     Returns:
-        fact_taux_occupation (DataFrame): table de faits du taux d'occupation des vélos
+        fact_taux_occupation (DataFrame): table de faits du taux d'occupation des vélos par station et par tranche horaire
     """
     fact_taux_occupation = df_availability_silver.withColumn(
         "taux_occupation",
@@ -241,6 +264,32 @@ def fact_taux_occupation(df_availability_silver: DataFrame) -> DataFrame:
             2,
         ),
     )
+    dim_date_df = dim_date(spark)
+    dim_station_df = dim_station(df_station_silver)
+    dim_time_df = dim_time(spark)  # ta dim_time avec hour, minute, time_key
+
+    # Jointure avec dim_date pour récupérer la clé surrogate date_key
+    fact_taux_occupation = fact_taux_occupation.join(
+        dim_date_df.select("date", "date_key"),
+        fact_taux_occupation["availability_date_partition"] == dim_date_df["date"],
+        "left",
+    ).drop("availability_date_partition", "date")
+
+    # Jointure avec dim_time pour récupérer la clé surrogate time_key
+    fact_taux_occupation = fact_taux_occupation.withColumn(
+        "hour", F.hour("availability_timestamp")
+    ).withColumn("minute", F.minute("availability_timestamp"))
+    fact_taux_occupation = fact_taux_occupation.join(
+        dim_time_df, on=["hour", "minute"], how="left"
+    ).drop("hour", "minute", "availability_timestamp")
+
+    # Jointure avec dim_station pour récupérer la clé surrogate station_key
+    fact_taux_occupation = fact_taux_occupation.join(
+        dim_station_df.select("station_id", "station_key"),
+        fact_taux_occupation["station_id"] == dim_station_df["station_id"],
+        "left",
+    ).drop("station_id", "bikes_available", "slots_free")
+
     return fact_taux_occupation
 
 
@@ -250,13 +299,15 @@ def fact_taux_occupation(df_availability_silver: DataFrame) -> DataFrame:
 # ----------------------
 
 
-def fact_meteo_dominante(df_weather_silver: DataFrame) -> DataFrame:
+def fact_meteo_dominante(
+    spark: SparkSession, df_weather_silver: DataFrame
+) -> DataFrame:
     """
     Création de la table de faits de la météo dominante par jour
     Colonnes:
-    - weather_date_partition (date)
-    - weather_condition (string)
-    - weather_condition_key (long)
+    - count (int): nombre d'occurrences de la condition météo par jour
+    - date_key (int): clé surrogate de la date
+    - weather_condition_key (long): clé surrogate de la condition météo
 
     Args:
         df_weather_silver (DataFrame): dataframe silver des conditions météorologiques
@@ -277,20 +328,41 @@ def fact_meteo_dominante(df_weather_silver: DataFrame) -> DataFrame:
         .filter(F.col("rn") == 1)
         .drop("rn")
     )
+
+    dim_date_df = dim_date(spark)
+    dim_weather_df = dim_weather(df_weather_silver)
+
+    # Jointure avec dim_date pour récupérer la clé surrogate date_key
+    fact_meteo_dominante = fact_meteo_dominante.join(
+        dim_date_df.select("date", "date_key"),
+        fact_meteo_dominante["weather_date_partition"] == dim_date_df["date"],
+        "left",
+    ).drop("weather_date_partition", "date")
+
+    fact_meteo_dominante = fact_meteo_dominante.join(
+        dim_weather_df,
+        fact_meteo_dominante["weather_condition"]
+        == dim_weather_df["weather_condition"],
+        "left",
+    ).drop("weather_condition")
+
     return fact_meteo_dominante
 
 
 # region TOP 5 STATIONS SATUREES
 # -----------------------
 
+# les  % de stations saturées par jour
 
-def fact_station_saturee_per_day(df_join_availability_station: DataFrame) -> DataFrame:
+def fact_station_saturee_per_day(
+    spark: SparkSession, df_join_availability_station: DataFrame
+) -> DataFrame:
     """
     Création de la table de faits du pourcentage de stations saturées par jour
     Colonnes:
-    - availability_date_partition (date)
-    - station_id (int)
     - station_saturee (float)
+    - date_key (int) : clé surrogate de la date
+    - station_key (int) : clé surrogate de la station
 
     Args:
         df_join_availability_station (DataFrame): dataframe résultant de la jointure entre la disponibilité des vélos et les informations des stations
@@ -314,21 +386,54 @@ def fact_station_saturee_per_day(df_join_availability_station: DataFrame) -> Dat
                 F.col("nbr_station_sature") / F.col("count_releve_per_day") * 100, 2
             ),
         )
-        .orderBy("availability_date_partition", F.desc("station_saturee"))
         .select("availability_date_partition", "station_id", "station_saturee")
     )
+
+    dim_date_df = dim_date(spark)
+    dim_station_df = dim_station(df_station_silver)
+    # dim_time_df = dim_time(spark)  # ta dim_time avec hour, minute, time_key
+
+    # Jointure avec dim_date pour récupérer la clé surrogate date_key
+    fact_station_saturee_per_day = fact_station_saturee_per_day.join(
+        dim_date_df.select("date", "date_key"),
+        fact_station_saturee_per_day["availability_date_partition"]
+        == dim_date_df["date"],
+        "left",
+    ).drop("availability_date_partition", "date")
+
+    # # Jointure avec dim_time pour récupérer la clé surrogate time_key
+    # fact_taux_occupation = fact_taux_occupation.withColumn(
+    #     "hour", F.hour("availability_timestamp")
+    # ).withColumn("minute", F.minute("availability_timestamp"))
+    # fact_taux_occupation = fact_taux_occupation.join(
+    #     dim_time_df, on=["hour", "minute"], how="left"
+    # ).drop("hour", "minute", "availability_timestamp")
+
+    # Jointure avec dim_station pour récupérer la clé surrogate station_key
+    fact_station_saturee_per_day = (
+        fact_station_saturee_per_day.join(
+            dim_station_df.select("station_id", "station_key"),
+            fact_station_saturee_per_day["station_id"] == dim_station_df["station_id"],
+            "left",
+        )
+        .drop("station_id", "bikes_available", "slots_free")
+        .orderBy("date_key", F.desc("station_saturee"))
+    )
+
     return fact_station_saturee_per_day
 
+# les 5 stations les plus saturées par jour (5 lignes par jour)
 
 def fact_top_5_station_saturee_per_day(
+    spark: SparkSession,
     df_join_availability_station: DataFrame,
 ) -> DataFrame:
     """
     Création de la table de faits du top 5 des stations les plus saturées par jour
     Colonnes:
-    - availability_date_partition (date)
-    - station_id (int)
     - station_saturee (float)
+    - date_key (int) : clé surrogate de la date
+    - station_key (int) : clé surrogate de la station
 
     Args:
         df_join_availability_station (DataFrame): dataframe de jointure (pour utiliser fact_station_saturee_per_day())
@@ -337,27 +442,26 @@ def fact_top_5_station_saturee_per_day(
         fact_top_5_station_saturee_per_day (DataFrame): table de faits du top 5 des stations les plus saturées par jour
     """
     # On crée une fenêtre par jour, triée par station_saturee décroissant
-    w = Window.partitionBy("availability_date_partition").orderBy(
-        F.col("station_saturee").desc()
-    )
+    w = Window.partitionBy("date_key").orderBy(F.col("station_saturee").desc())
 
     # On garde uniquement le top 5 des stations les plus saturées par jour
     fact_top_5_station_saturee_per_day = (
-        fact_station_saturee_per_day(df_join_availability_station)
+        fact_station_saturee_per_day(spark, df_join_availability_station)
         .withColumn("rn", F.row_number().over(w))
         .filter(F.col("rn") <= 5)
         .drop("rn")
     )
     return fact_top_5_station_saturee_per_day
 
+# liste des 5 stations les plus saturées par jour
 
-def fact_top5_array(
+def fact_top5_array(spark: SparkSession,
     df_join_availability_station: DataFrame,
 ) -> DataFrame:
     """
     Création de la table de faits avec le top 5 des stations les plus saturées par jour sous forme de liste
     Colonnes:
-    - availability_date_partition (date)
+    - date_key (int) : clé surrogate de la date
     - top_5_stations (array)
 
     Args:
@@ -367,10 +471,10 @@ def fact_top5_array(
         fact_top5_array (DataFrame): table de faits avec le top 5 des stations les plus saturées par jour sous forme de liste
     """
     fact_top5_array = (
-        fact_top_5_station_saturee_per_day(df_join_availability_station)
-        .groupBy("availability_date_partition")
+        fact_top_5_station_saturee_per_day(spark,df_join_availability_station)
+        .groupBy("date_key")
         .agg(
-            F.collect_list(F.struct("station_id", "station_saturee")).alias(
+            F.collect_list(F.struct("station_key", "station_saturee")).alias(
                 "top_5_stations"
             )
         )
@@ -385,6 +489,7 @@ def fact_top5_array(
 
 
 def availability_daily_gold(
+    spark: SparkSession,
     df_availability_silver: DataFrame,
     df_weather_silver: DataFrame,
     df_join_availability_station: DataFrame,
@@ -408,22 +513,22 @@ def availability_daily_gold(
     """
     availability_daily_gold = (
         (
-            fact_avg_bikes_available_per_day_and_station(df_availability_silver)
+            fact_avg_bikes_available_per_day_and_station(spark, df_availability_silver)
             .join(
-                fact_meteo_dominante(df_weather_silver),
-                fact_avg_bikes_available_per_day_and_station(df_availability_silver)[
-                    "availability_date_partition"
-                ]
-                == fact_meteo_dominante(df_weather_silver)["weather_date_partition"],
+                fact_meteo_dominante(spark, df_weather_silver),
+                fact_avg_bikes_available_per_day_and_station(
+                    spark, df_availability_silver
+                )["availability_date_partition"]
+                == fact_meteo_dominante(spark, df_weather_silver)["weather_date_partition"],
                 "inner",
             )
             .join(
-                fact_taux_occupation(df_join_availability_station),
+                fact_taux_occupation(spark, df_join_availability_station),
                 "availability_date_partition",
                 "inner",
             )
             .join(
-                fact_top5_array(df_join_availability_station),
+                fact_top5_array(spark, df_join_availability_station),
                 "availability_date_partition",
                 "inner",
             )
@@ -495,12 +600,14 @@ if __name__ == "__main__":
         "left",
     )
 
-    # création de la table factuelle gold_daily
-    df_gold = availability_daily_gold(
-        df_availability_silver, df_weather_silver, df_join_availability_station
-    )
+    # # création de la table factuelle gold_daily
+    # df_gold = availability_daily_gold(
+    #     spark, df_availability_silver, df_weather_silver, df_join_availability_station
+    # )
 
-    df_gold.show()
+    # df_gold.show()
+    df = fact_top5_array(spark, df_join_availability_station)
+    df.show()
 
 # endregion
 
