@@ -200,10 +200,10 @@ def fact_avg_bikes_available_per_day_and_station(
     """
 
     fact_avg_velo_dispo_per_day_and_station = (
-        df_availability_silver.groupBy("availability_date_partition", "station_id")
-        .agg(F.round(F.avg("bikes_available"), 2).alias("avg_bikes_available"))
-        .orderBy("availability_date_partition", "station_id")
-    )
+        df_availability_silver.groupBy("availability_date_partition", "station_id").agg(
+            F.round(F.avg("bikes_available"), 2).alias("avg_bikes_available")
+        )
+    ).select("availability_date_partition", "station_id", "avg_bikes_available")
 
     # Jointure avec dim_date pour obtenir la clé surrogate date_key
     fact_avg_velo_dispo_per_day_and_station = (
@@ -265,6 +265,11 @@ def fact_taux_occupation(
             * 100,
             2,
         ),
+    ).select(
+        "station_id",
+        "availability_date_partition",
+        "availability_timestamp",
+        "taux_occupation",
     )
 
     # Jointure avec dim_date pour récupérer la clé surrogate date_key
@@ -316,9 +321,11 @@ def fact_meteo_dominante(
     Returns:
         fact_meteo_dominante (DataFrame): table de faits de la météo dominante par jour
     """
-    weather_counts = df_weather_silver.groupBy(
-        "weather_date_partition", "weather_condition"
-    ).count()
+    weather_counts = (
+        df_weather_silver.groupBy("weather_date_partition", "weather_condition")
+        .count()
+        .select("weather_date_partition", "weather_condition", "count")
+    )
 
     # On crée une fenêtre par jour, triée par count décroissant
     w = Window.partitionBy("weather_date_partition").orderBy(F.desc("count"))
@@ -401,15 +408,11 @@ def fact_station_saturee_per_day(
     ).drop("availability_date_partition", "date")
 
     # Jointure avec dim_station pour récupérer la clé surrogate station_key
-    fact_station_saturee_per_day = (
-        fact_station_saturee_per_day.join(
-            dim_station_df.select("station_id", "station_key"),
-            fact_station_saturee_per_day["station_id"] == dim_station_df["station_id"],
-            "left",
-        )
-        .drop("station_id", "bikes_available", "slots_free")
-        .orderBy("date_key", F.desc("station_saturee"))
-    )
+    fact_station_saturee_per_day = fact_station_saturee_per_day.join(
+        dim_station_df.select("station_id", "station_key"),
+        fact_station_saturee_per_day["station_id"] == dim_station_df["station_id"],
+        "left",
+    ).drop("station_id", "bikes_available", "slots_free")
 
     return fact_station_saturee_per_day
 
@@ -440,7 +443,9 @@ def fact_top_5_station_saturee_per_day(
 
     # On garde uniquement le top 5 des stations les plus saturées par jour
     fact_top_5_station_saturee_per_day = (
-        fact_station_saturee_per_day(df_join_availability_station, dim_date_df, dim_station_df)
+        fact_station_saturee_per_day(
+            df_join_availability_station, dim_date_df, dim_station_df
+        )
         .withColumn("rn", F.row_number().over(w))
         .filter(F.col("rn") <= 5)
         .drop("rn")
@@ -469,7 +474,9 @@ def fact_top5_array(
         fact_top5_array (DataFrame): table de faits avec le top 5 des stations les plus saturées par jour sous forme de liste
     """
     fact_top5_array = (
-        fact_top_5_station_saturee_per_day(df_join_availability_station, dim_date_df, dim_station_df)
+        fact_top_5_station_saturee_per_day(
+            df_join_availability_station, dim_date_df, dim_station_df
+        )
         .groupBy("date_key")
         .agg(
             F.collect_list(F.struct("station_key", "station_saturee")).alias(
@@ -524,13 +531,18 @@ def availability_daily_gold(
             )
             .join(
                 fact_taux_occupation(
-                    df_join_availability_station, dim_date_df, dim_station_df, dim_time_df
+                    df_join_availability_station,
+                    dim_date_df,
+                    dim_station_df,
+                    dim_time_df,
                 ),
                 "date_key",
                 "inner",
             )
             .join(
-                fact_top5_array(df_join_availability_station, dim_date_df, dim_station_df),
+                fact_top5_array(
+                    df_join_availability_station, dim_date_df, dim_station_df
+                ),
                 "date_key",
                 "inner",
             )
@@ -549,6 +561,7 @@ def availability_daily_gold(
             F.first("weather_condition_key").alias("weather_condition_key_day"),
             F.first("top_5_stations").alias("top_5_stations_day"),
         )
+        .orderBy("date_key")
     )
     return availability_daily_gold
 
@@ -560,7 +573,14 @@ def availability_daily_gold(
 # ------------------
 if __name__ == "__main__":
     # creation Spark session
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    spark = (
+        SparkSession.builder.master("local[*]")
+        # réduire le nombre de partitions de shuffle pour les petites données
+        .config("spark.sql.shuffle.partitions", "16") 
+        .getOrCreate()
+    )
+    # Connaitre le nombre de coeurs disponibles
+    # print(f"==========================\nNOMBRE DE COEURS :{spark.sparkContext.defaultParallelism}\n==========================")
 
     # ==== DF SILVER ====
 
@@ -627,10 +647,17 @@ if __name__ == "__main__":
 
     # création de la table factuelle gold_daily
     df_gold = availability_daily_gold(
-        df_availability_silver, df_weather_silver, df_join_availability_station, dim_date_df, dim_station_df, dim_time_df, dim_weather_df
+        df_availability_silver,
+        df_weather_silver,
+        df_join_availability_station,
+        dim_date_df,
+        dim_station_df,
+        dim_time_df,
+        dim_weather_df,
     )
 
-    df_gold.show()
+    # df_gold.show()
+    print(f"==========================\nNOMBRE DE COEURS :{spark.sparkContext.defaultParallelism}\n==========================")
 
 
 # endregion
