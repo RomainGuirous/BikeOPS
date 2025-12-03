@@ -187,9 +187,9 @@ def fact_avg_bikes_available_per_day_and_station(
     """
     Création de la table de faits de la moyenne de vélos disponibles par jour et par station
     Colonnes:
+    - avg_bikes_available (float)
     - date_key (int) : clé surrogate de la date
     - station_key (int) : clé surrogate de la station
-    - avg_bikes_available (float)
     Args:
         df_availability_silver (DataFrame): dataframe silver de la disponibilité des vélos
         dim_date_df (DataFrame): dataframe dimension date
@@ -461,29 +461,29 @@ def fact_top5_array(
     dim_date_df: DataFrame,
     dim_station_df: DataFrame,
 ) -> DataFrame:
-    """
-    Création de la table de faits avec le top 5 des stations les plus saturées par jour sous forme de liste
-    Colonnes:
-    - date_key (int) : clé surrogate de la date
-    - top_5_stations (array)
-
-    Args:
-        df_join_availability_station (DataFrame): dataframe de jointure (pour utiliser fact_top_5_station_saturee_per_day())
-
-    Returns:
-        fact_top5_array (DataFrame): table de faits avec le top 5 des stations les plus saturées par jour sous forme de liste
-    """
+    
+    df_top5 = fact_top_5_station_saturee_per_day(
+        df_join_availability_station, dim_date_df, dim_station_df
+    )
+    
+    # Fenêtre partitionnée par date_key, triée par station_saturee desc, station_key asc (pour ordre stable)
+    w = Window.partitionBy("date_key").orderBy(F.desc("station_saturee"), F.asc("station_key"))
+    
+    # Ajouter rang (row_number) pour prendre top 5 par date
+    df_ranked = df_top5.withColumn("rank", F.row_number().over(w)).filter("rank <= 5")
+    
+    # Collecte ordonnée avec orderBy sur la clé date_key et rank (dans collect_list)
     fact_top5_array = (
-        fact_top_5_station_saturee_per_day(
-            df_join_availability_station, dim_date_df, dim_station_df
-        )
+        df_ranked
+        .orderBy("date_key", "rank")
         .groupBy("date_key")
         .agg(
-            F.collect_list(F.struct("station_key", "station_saturee")).alias(
-                "top_5_stations"
-            )
+            F.collect_list(
+                F.struct("station_key", "station_saturee")
+            ).alias("top_5_stations")
         )
     )
+    
     return fact_top5_array
 
 
@@ -651,7 +651,10 @@ if __name__ == "__main__":
         dim_weather_df,
     )
 
-    df_gold.show()
+    # df_gold.show()
+    df = fact_avg_bikes_available_per_day_and_station(
+        df_availability_silver, dim_date_df, dim_station_df)
+    df.show()
 
 
 # endregion
