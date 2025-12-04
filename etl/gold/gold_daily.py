@@ -97,6 +97,29 @@ def dim_weather(df_weather_silver: DataFrame) -> DataFrame:
 def dim_date(
     spark: SparkSession, start_date: str = "2025-01-01", end_date: str = "2025-12-31"
 ):
+    """
+    Création de la table dimensionnelle de la date
+    Colonnes:
+    - date (date)
+    - year (int)
+    - month (int)
+    - day (int)
+    - quarter (int)
+    - day_of_week (string)
+    - day_of_week_num (int)
+    - is_weekend (boolean)
+    - week_of_year (int)
+    - iso_year (int)
+    - date_key (long)
+    
+    Args:
+        spark (SparkSession): session Spark
+        start_date (str): date de début au format 'YYYY-MM-DD'
+        end_date (str): date de fin au format 'YYYY-MM-DD'
+        
+    Returns:
+        dim_date (DataFrame): table dimensionnelle de la date
+    """
     # Création d'un DataFrame Pandas
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
@@ -466,38 +489,39 @@ def fact_top5_array(
     Colonnes:
     - date_key (int) : clé surrogate de la date
     - top_5_stations (array) : liste des 5 stations les plus saturées du jour
-    
+
     Args:
         df_join_availability_station (DataFrame): dataframe de jointure (pour utiliser fact_top_5_station_saturee_per_day())
         dim_date_df (DataFrame): dataframe dimension date
         dim_station_df (DataFrame): dataframe dimension station
-        
+
     Returns:
         fact_top5_array (DataFrame): table de faits du top 5 des stations les plus saturées par jour sous forme de liste
     """
-    
+
     df_top5 = fact_top_5_station_saturee_per_day(
         df_join_availability_station, dim_date_df, dim_station_df
     )
-    
+
     # Fenêtre partitionnée par date_key, triée par station_saturee desc, station_key asc (pour ordre stable)
-    w = Window.partitionBy("date_key").orderBy(F.desc("station_saturee"), F.asc("station_key"))
-    
+    w = Window.partitionBy("date_key").orderBy(
+        F.desc("station_saturee"), F.asc("station_key")
+    )
+
     # Ajouter rang (row_number) pour prendre top 5 par date
     df_ranked = df_top5.withColumn("rank", F.row_number().over(w)).filter("rank <= 5")
-    
+
     # Collecte ordonnée avec orderBy sur la clé date_key et rank (dans collect_list)
     fact_top5_array = (
-        df_ranked
-        .orderBy("date_key", "rank")
+        df_ranked.orderBy("date_key", "rank")
         .groupBy("date_key")
         .agg(
-            F.collect_list(
-                F.struct("station_key", "station_saturee")
-            ).alias("top_5_stations")
+            F.collect_list(F.struct("station_key", "station_saturee")).alias(
+                "top_5_stations"
+            )
         )
     )
-    
+
     return fact_top5_array
 
 
@@ -590,7 +614,7 @@ if __name__ == "__main__":
     spark = (
         SparkSession.builder.master("local[*]")
         # réduire le nombre de partitions de shuffle pour les petites données
-        .config("spark.sql.shuffle.partitions", "16") 
+        .config("spark.sql.shuffle.partitions", "16")
         .getOrCreate()
     )
     # Connaitre le nombre de coeurs disponibles
@@ -639,7 +663,7 @@ if __name__ == "__main__":
     )
 
     # === DF GOLD DAILY ====
-  
+
     # /!\ si dataframe plus conséquent et réutilisation tables dimensionnelles /!\:
     # Création des tables dimensionnelles **avec cache**
     dim_station_df = dim_station(df_station_silver).cache()
@@ -666,8 +690,7 @@ if __name__ == "__main__":
     )
 
     # df_gold.show()
-    df = fact_top5_array(
-        df_join_availability_station, dim_date_df, dim_station_df)
+    df = fact_top5_array(df_join_availability_station, dim_date_df, dim_station_df)
     df.show()
 
 

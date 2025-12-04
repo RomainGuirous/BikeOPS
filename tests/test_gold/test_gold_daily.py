@@ -10,8 +10,10 @@ from etl.gold.gold_daily import (
     fact_top_5_station_saturee_per_day,
     fact_top5_array,
     availability_daily_gold,
+    dim_date,
+    dim_time
 )
-from pyspark.sql import Row
+from pyspark.sql import Row, functions as F
 # endregion
 
 
@@ -66,18 +68,93 @@ def test_dim_weather(
 
 # region DIM DATE
 
+# Ici, ne pas comparer sur 365 jours !!!
+# Juste vérifier quelques dates critiques pour s'assurer que les colonnes sont bien calculées.
+# La logique repose sur des ft natives Spark et Pandas, pas besoin de le tester.
+# Ce qu'il faut vérifier, c'est que le DataFrame est bien généré avec les bonnes colonnes, types et les noms adéquats.
+def test_dim_date(spark_session):
+    df = dim_date(spark_session, "2025-01-01", "2025-01-03")
 
-def test_dim_date():
-    pass
+    # --------- structure ------
+    expected_cols = [
+        "date",
+        "year",
+        "month",
+        "day",
+        "quarter",
+        "day_of_week",
+        "day_of_week_num",
+        "is_weekend",
+        "week_of_year",
+        "iso_year",
+        "date_key",
+    ]
+    assert df.columns == expected_cols
+
+    # -------- nombre de lignes ------
+    assert df.count() == 3
+
+    # -------- premières lignes : valeurs critiques ------
+    rows = df.orderBy("date").collect()
+
+    # 2025-01-01
+    r0 = rows[0]
+    assert str(r0["date"]) == "2025-01-01"
+    assert r0["year"] == 2025
+    assert r0["month"] == 1
+    assert r0["day"] == 1
+    assert r0["quarter"] == 1
+    assert r0["day_of_week"] == "Wed"
+    assert r0["day_of_week_num"] == 3
+    assert r0["is_weekend"] is False
+    assert r0["week_of_year"] == 1
+    assert r0["iso_year"] == 2025
+    assert isinstance(r0["date_key"], int)
+
+    # 2025-01-03
+    r2 = rows[2]
+    assert str(r2["date"]) == "2025-01-03"
+    assert r2["day_of_week"] == "Fri"
+    assert r2["is_weekend"] is False
 
 
 # endregion
 
 # region DIM TIME
 
+# Ici, ne pas comparer sur 1440 lignes !!!
+# Juste vérifier quelques heures et minutes clés pour s'assurer que les colonnes sont bien calculées.
+# On vérifie nombre de lignes, structure et quelques valeurs critiques.
 
-def test_dim_time():
-    pass
+def test_dim_time(spark_session):
+    df = dim_time(spark_session)
+
+    # Vérification de la structure et du nombre de lignes
+    expected_cols = ["hour", "minute", "time_key"]
+    assert df.columns == expected_cols
+    assert df.count() == 24 * 60
+
+    # Vérifier que "time_key" est bien calculé comme hour * 60 + minute
+    def assert_time_key_correct(time_key_val):
+        row = df.filter(F.col("time_key") == time_key_val).collect()[0]
+        assert row["time_key"] == row["hour"] * 60 + row["minute"]
+
+    # Tests spécifiques
+    row0 = df.filter(F.col("time_key") == 0).collect()[0]
+    assert row0["hour"] == 0
+    assert row0["minute"] == 0
+
+    row_mid = df.filter(F.col("time_key") == 720).collect()[0]
+    assert row_mid["hour"] == 12
+    assert row_mid["minute"] == 0
+
+    row_last = df.filter(F.col("time_key") == 1439).collect()[0]
+    assert row_last["hour"] == 23
+    assert row_last["minute"] == 59
+
+    # Validation de la cohérence
+    for time_key_val in [0, 720, 1439, 123, 999]:
+        assert_time_key_correct(time_key_val)
 
 
 # endregion
@@ -367,7 +444,6 @@ def test_availability_daily_gold(monkeypatch, spark_session):
     assert row["taux_occupation_day"] == 50.0
     assert row["weather_condition_key_day"] == 200
     assert row["top_5_stations_day"] == [Row(station_key=100, station_saturee=0.8)]
-
 
 
 # endregion
