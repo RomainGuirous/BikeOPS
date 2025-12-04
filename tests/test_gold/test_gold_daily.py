@@ -73,7 +73,7 @@ def test_dim_date():
 
 # endregion
 
-# region DIM DATE
+# region DIM TIME
 
 
 def test_dim_time():
@@ -262,75 +262,60 @@ def test_fact_top5_array(
 
 # region AVAILABILITY DAILY GOLD
 
-
-# def test_availability_daily_gold(
-#     fact_availability_silver_input_df_fixture: pytest.fixture,
-#     fact_weather_silver_input_df_fixture: pytest.fixture,
-#     fact_join_availability_station_input_df_fixture: pytest.fixture,
-#     fact_avg_bikes_dim_date_input_df_fixture: pytest.fixture,
-#     fact_top_5_station_saturee_dim_station_input_df_fixture: pytest.fixture,
-#     dim_time_df_fixture: pytest.fixture,
-#     dim_weather_df_fixture: pytest.fixture,
-#     availability_daily_gold_output_df_fixture: pytest.fixture,
-# ):
-#     """
-#     Teste que la fonction availability_daily_gold crée un DataFrame Spark correct.
-#     """
-#     df_result = availability_daily_gold(
-#         fact_availability_silver_input_df_fixture,
-#         fact_weather_silver_input_df_fixture,
-#         fact_join_availability_station_input_df_fixture,
-#         fact_avg_bikes_dim_date_input_df_fixture,
-#         fact_top_5_station_saturee_dim_station_input_df_fixture,
-#         dim_time_df_fixture,
-#         dim_weather_df_fixture,
-#     )
-
-#     result_sorted = df_result.orderBy("date_key")
-#     expected_sorted = availability_daily_gold_output_df_fixture.orderBy("date_key")
-
-#     assert result_sorted.schema == expected_sorted.schema
-#     assert result_sorted.collect() == expected_sorted.collect()
-
-  # remplace par le chemin réel de ton module, par ex "src.gold.availability"
+# But de ce test: vérifier que la fonction availability_daily_gold intègre correctement les différentes
+# fact tables et produit un DataFrame avec le bon schéma et des valeurs attendues.
+# NE PAS FAIRE: tester la logique interne des fonctions fact_* ici, déjà testé dans les tests unitaires précédents.
+# On va mocker les fonctions fact_* pour retourner des DataFrames simples et contrôlés. (monkeypatching)
+# Mocker une fonction = remplacer son comportement réel par un comportement artificiel, contrôlé, uniquement pendant le test.
 
 
 def test_availability_daily_gold(monkeypatch, spark_session):
-
-    MODULE_PATH = "etl.gold.gold_daily"
     # Mock des DataFrames en sortie des fonctions internes
+
+    # Chemin du module où se trouvent les fonctions à mocker
+    MODULE_PATH = "etl.gold.gold_daily"
+
+    # On va retourner des DataFrames simples pour vérifier l'intégration.
+    # Ces DataFrames mockés doivent correspondre au schéma des fonctions originales. (colonnes et types)
+    # Valeurs choisies arbitrairement pour le test. (simples et distinctes)
+
+    # mock fact_avg_bikes_available_per_day_and_station
     df_avg = spark_session.createDataFrame(
-        [(1, 10.5, 100), (2, 8.7, 101)],
-        ["date_key", "avg_bikes_available", "station_key"],
+        [(10.5, 1, 100), (8.7, 2, 101)],
+        ["avg_bikes_available", "date_key", "station_key"],
     )
-
-    df_meteo = spark_session.createDataFrame(
-        [(1, 5, 200), (2, 3, 201)],
-        ["date_key", "count", "weather_condition_key"],
-    )
-
-    df_taux = spark_session.createDataFrame(
-        [(1, 50.0, 10, 100), (2, 75.0, 11, 101)],
-        ["date_key", "taux_occupation", "time_key", "station_key"],
-    )
-
-   df_top5 = spark_session.createDataFrame([
-    (1, [Row(station_key=100, station_saturee=0.8)]),
-    (2, [Row(station_key=101, station_saturee=0.9)]),
-], ["date_key", "top_5_stations"])
-
-    # Monkeypatch des fonctions appelées dans availability_daily_gold
     monkeypatch.setattr(
         f"{MODULE_PATH}.fact_avg_bikes_available_per_day_and_station",
         lambda *args, **kwargs: df_avg,
+    )
+
+    # mock fact_meteo_dominante
+    df_meteo = spark_session.createDataFrame(
+        [(5, 1, 200), (3, 2, 201)],
+        ["count", "date_key", "weather_condition_key"],
     )
     monkeypatch.setattr(
         f"{MODULE_PATH}.fact_meteo_dominante",
         lambda *args, **kwargs: df_meteo,
     )
+
+    # mock fact_taux_occupation
+    df_taux = spark_session.createDataFrame(
+        [(50.0, 1, 10, 100), (75.0, 2, 11, 101)],
+        ["taux_occupation", "date_key", "time_key", "station_key"],
+    )
     monkeypatch.setattr(
         f"{MODULE_PATH}.fact_taux_occupation",
         lambda *args, **kwargs: df_taux,
+    )
+
+    # mock fact_top5_array
+    df_top5 = spark_session.createDataFrame(
+        [
+            (1, [Row(station_key=100, station_saturee=0.8)]),
+            (2, [Row(station_key=101, station_saturee=0.9)]),
+        ],
+        ["date_key", "top_5_stations"],
     )
     monkeypatch.setattr(
         f"{MODULE_PATH}.fact_top5_array",
@@ -338,9 +323,12 @@ def test_availability_daily_gold(monkeypatch, spark_session):
     )
 
     # Données d’entrée fictives (peu importe ici, car on mocke tout)
+    # Doivent être fournis pour respecter la signature de la fonction availability_daily_gold
     df_availability_silver = spark_session.createDataFrame([], schema="dummy STRING")
     df_weather_silver = spark_session.createDataFrame([], schema="dummy STRING")
-    df_join_availability_station = spark_session.createDataFrame([], schema="dummy STRING")
+    df_join_availability_station = spark_session.createDataFrame(
+        [], schema="dummy STRING"
+    )
     dim_date_df = spark_session.createDataFrame([], schema="dummy STRING")
     dim_station_df = spark_session.createDataFrame([], schema="dummy STRING")
     dim_time_df = spark_session.createDataFrame([], schema="dummy STRING")
@@ -365,15 +353,21 @@ def test_availability_daily_gold(monkeypatch, spark_session):
         "weather_condition_key_day",
         "top_5_stations_day",
     ]
-    assert set(result_df.columns) == set(expected_cols)
+    assert result_df.columns == expected_cols
 
     # Assertions basiques sur le contenu (par exemple le nombre de lignes)
     assert result_df.count() == 2
 
-    # Optionnel : check des valeurs pour la première ligne
+    # Vérifier une ligne spécifique pour s'assurer que les jointures et agrégations se sont bien passées
+    # Pas besoin de vérifier toutes les lignes, la logique interne est testée ailleurs
     row = result_df.orderBy("date_key").first()
+
     assert row["date_key"] == 1
-    assert abs(row["avg_bikes_available_day"] - 10.5) < 0.01
+    assert row["avg_bikes_available_day"] == 10.5
+    assert row["taux_occupation_day"] == 50.0
+    assert row["weather_condition_key_day"] == 200
+    assert row["top_5_stations_day"] == [Row(station_key=100, station_saturee=0.8)]
+
 
 
 # endregion

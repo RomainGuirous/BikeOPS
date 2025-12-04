@@ -461,6 +461,20 @@ def fact_top5_array(
     dim_date_df: DataFrame,
     dim_station_df: DataFrame,
 ) -> DataFrame:
+    """
+    Création de la table de faits du top 5 des stations les plus saturées par jour sous forme de liste
+    Colonnes:
+    - date_key (int) : clé surrogate de la date
+    - top_5_stations (array) : liste des 5 stations les plus saturées du jour
+    
+    Args:
+        df_join_availability_station (DataFrame): dataframe de jointure (pour utiliser fact_top_5_station_saturee_per_day())
+        dim_date_df (DataFrame): dataframe dimension date
+        dim_station_df (DataFrame): dataframe dimension station
+        
+    Returns:
+        fact_top5_array (DataFrame): table de faits du top 5 des stations les plus saturées par jour sous forme de liste
+    """
     
     df_top5 = fact_top_5_station_saturee_per_day(
         df_join_availability_station, dim_date_df, dim_station_df
@@ -652,8 +666,8 @@ if __name__ == "__main__":
     )
 
     # df_gold.show()
-    df = fact_avg_bikes_available_per_day_and_station(
-        df_availability_silver, dim_date_df, dim_station_df)
+    df = fact_top5_array(
+        df_join_availability_station, dim_date_df, dim_station_df)
     df.show()
 
 
