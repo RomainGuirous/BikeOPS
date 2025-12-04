@@ -201,28 +201,28 @@ def create_silver_df(
     drop_cols: list[str] = None,
 ) -> tuple[DataFrame, dict]:
     """
-        Création du DataFrame silver avec nettoyage et rapport qualité.
-         /!\ Nécessite une session Spark existante. /!\ 
+    Création du DataFrame silver avec nettoyage et rapport qualité.
+    /!\ Nécessite une session Spark existante. /!\ 
 
-        Args:
-            df (DataFrame): Le DataFrame brut à nettoyer.
-            transformations (list[dict]): Liste des transformations à appliquer.
-                dictionnaire avec les clés :
-                - 'col' (str): Le nom de la colonne à transformer.
-                - 'func' (callable): La fonction de transformation à appliquer.
-                - 'args' (list, optional): Arguments positionnels supplémentaires pour la fonction.
-            partition_col (str, optional): Colonne pour partitionner les données. Defaults to None.
+    Args:
+        df (DataFrame): Le DataFrame brut à nettoyer.
+        transformations (list[dict]): Liste des transformations à appliquer.
+            dictionnaire avec les clés :
+            - 'col' (str): Le nom de la colonne à transformer.
+            - 'func' (callable): La fonction de transformation à appliquer.
+            - 'args' (list, optional): Arguments positionnels supplémentaires pour la fonction.
+        partition_col (str, optional): Colonne pour partitionner les données. Defaults to None.
 
-        Returns:
-            tuple: Un tuple contenant :
-            - df_clean (DataFrame): 
-                DataFrame Spark nettoyé.
-            - rapport_value (dict): 
-                Rapport de qualité des données, avec les clés suivantes :
-                - 'total_lignes_brutes' (int): Nombre de lignes brutes.
-                - 'total_lignes_corrigees' (int): Nombre total de lignes corrigées.
-                - 'total_valeurs_invalides' (int): Nombre total de valeurs invalides.
-                - 'total_lignes_supprimees' (int): Nombre de lignes supprimées.
+    Returns:
+        tuple: Un tuple contenant :
+        - df_clean (DataFrame): 
+            DataFrame Spark nettoyé.
+        - rapport_value (dict): 
+            Rapport de qualité des données, avec les clés suivantes :
+            - 'total_lignes_brutes' (int): Nombre de lignes brutes.
+            - 'total_lignes_corrigees' (int): Nombre total de lignes corrigées.
+            - 'total_valeurs_invalides' (int): Nombre total de valeurs invalides.
+            - 'total_lignes_supprimees' (int): Nombre de lignes supprimées.
 
         """
     # nombre de lignes brutes => pour rapport qualité

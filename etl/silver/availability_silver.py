@@ -19,24 +19,31 @@ from etl.utils.spark_functions import (
 
 def create_silver_availability_df(spark: SparkSession, df_input: DataFrame=None, df_join: DataFrame=None) -> tuple[DataFrame, dict]:
     """
-    Crée un DataFrame Spark nettoyé pour les données de disponibilité des vélos.
+    Fonction d'orchestration qui permettre de d'appliquer par défaut les bons paramètres pour construire le DataFrame silver de disponibilité des vélos.
+    
+    Colonnes:
+    - station_id (IntegerType): Identifiant de la station (entier positif).
+    - timestamp (StringType): Horodatage de la disponibilité.
+    - bikes_available (IntegerType): Nombre de vélos disponibles.
+    - slots_free (IntegerType): Nombre d'emplacements libres.
+    - date_partition (DateType): Date pour partitionnement.
+
+    Rapport qualité des données:
+    - total_lignes_brutes (int): Nombre total de lignes en entrée.
+    - total_lignes_corrigees (int): Nombre de lignes corrigées.
+    - total_valeurs_invalides (int): Nombre total de valeurs invalides.
+    - total_lignes_supprimees (int): Nombre de lignes supprimées.
 
     Args:
         spark (SparkSession): La session Spark active.
+        df_input (DataFrame, optional): DataFrame Spark brut des données de disponibilité (availability_raw). Si None, lit le fichier CSV par défaut. Defaults to None.
+        df_join (DataFrame, optional): DataFrame Spark des capacités des stations (stations). Si None, lit le fichier CSV par défaut. Defaults to None.
 
     Returns:
         tuple: Un tuple contenant :
         - df_availability_clean (DataFrame): DataFrame Spark nettoyé des données de disponibilité:
-            - station_id (IntegerType): Identifiant de la station (entier positif).
-            - timestamp (StringType): Horodatage de la disponibilité.
-            - bikes_available (IntegerType): Nombre de vélos disponibles.
-            - slots_free (IntegerType): Nombre d'emplacements libres.
-            - date_partition (DateType): Date pour partitionnement.
         - availability_rapport_value (dict): Rapport de qualité des données de disponibilité:
-            - total_lignes_brutes (int): Nombre total de lignes en entrée.
-            - total_lignes_corrigees (int): Nombre de lignes corrigées.
-            - total_valeurs_invalides (int): Nombre total de valeurs invalides.
-            - total_lignes_supprimees (int): Nombre de lignes supprimées.
+            
     """
     # lecture du fichier CSV
     if df_input is None:
@@ -141,7 +148,6 @@ if __name__ == "__main__":
     df_clean.write.mode("overwrite").partitionBy("date_partition").parquet(
         "/app/data/data_clean/silver/availability_silver"
     )
-
     # arrêt de la session Spark
     spark.stop()
 
