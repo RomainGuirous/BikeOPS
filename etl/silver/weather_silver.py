@@ -82,7 +82,12 @@ if __name__ == "__main__":
     # ======CREATION DATAFRAME======
 
     # creation Spark session
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    spark = (
+        SparkSession.builder.master("local[*]")
+        # réduire le nombre de partitions de shuffle pour les petites données
+        .config("spark.sql.shuffle.partitions", "16")
+        .getOrCreate()
+    )
 
     df_clean, rapport_value = create_silver_weather_df(spark)
 
